@@ -27,11 +27,23 @@
 
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <!-- NEW: Daily Tracker Section -->
+        <div id="daily-tracker-container" class="px-4 py-6 sm:px-0">
+            <div class="bg-white p-8 rounded-lg shadow-md mb-6">
+                <h2 class="text-2xl font-bold mb-4 text-gray-800">Today's Medication</h2>
+                <div id="todays-meds-list" class="space-y-3">
+                    <p class="text-center text-gray-500">Loading today's schedule...</p>
+                    <!-- Daily reminders will be dynamically inserted here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Existing Prescriptions Section -->
         <div class="px-4 py-6 sm:px-0">
-            <h2 class="text-2xl font-bold mb-4 text-gray-800">My Prescriptions</h2>
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">My Full Prescriptions</h2>
             <div id="prescriptions-list" class="space-y-4">
-                <p>Loading your prescriptions...</p>
-                <!-- Prescriptions will be dynamically inserted here -->
+                <p class="text-center text-gray-500">Loading your prescriptions...</p>
+                <!-- Full prescriptions will be dynamically inserted here -->
             </div>
         </div>
     </main>
