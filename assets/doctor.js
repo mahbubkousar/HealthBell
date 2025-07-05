@@ -2,12 +2,14 @@ import { auth, db } from '../firebase-config.js';
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
 import { collection, getDocs, addDoc, query, where, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
+// --- DOM Element References ---
 const patientSelect = document.getElementById('patient-select');
 const medicinesContainer = document.getElementById('medicines-container');
 const addMedicineBtn = document.getElementById('add-medicine-btn');
 const prescriptionForm = document.getElementById('prescription-form');
 const logoutButton = document.getElementById('logout-button');
 const successMessage = document.getElementById('success-message');
+const medicineTemplate = document.getElementById('medicine-template'); // Get the template
 
 let doctorId;
 let doctorName;
@@ -15,26 +17,18 @@ let doctorName;
 // --- AUTHENTICATION & REDIRECTION ---
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        // User is signed in.
         const uid = user.uid;
-        doctorId = uid; // Store doctor's UID
-
-        // Check user role
+        doctorId = uid; 
         const userDocRef = doc(db, "users", uid);
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists() && userDoc.data().role === 'doctor') {
-            doctorName = userDoc.data().name; // Store doctor's name
-            // User is a doctor, so load the necessary data.
+            doctorName = userDoc.data().name; 
             loadPatients();
-            addMedicineField(); // Add the first medicine field by default
+            addMedicineField(); // Add the first medicine field on page load
         } else {
-            // If not a doctor, redirect to login.
-            console.log("Access denied. User is not a doctor.");
             window.location.href = '/login.html';
         }
     } else {
-        // User is signed out. Redirect to login.
-        console.log("User is not signed in.");
         window.location.href = '/login.html';
     }
 });
@@ -42,10 +36,7 @@ onAuthStateChanged(auth, async (user) => {
 // --- LOGOUT LOGIC ---
 logoutButton.addEventListener('click', () => {
     signOut(auth).then(() => {
-        console.log("User signed out successfully");
         window.location.href = '/login.html';
-    }).catch((error) => {
-        console.error("Sign out error", error);
     });
 });
 
@@ -54,100 +45,96 @@ async function loadPatients() {
     try {
         const q = query(collection(db, "users"), where("role", "==", "patient"));
         const querySnapshot = await getDocs(q);
-        
-        patientSelect.innerHTML = '<option value="">Select a patient</option>'; // Clear previous options
+        patientSelect.innerHTML = '<option value="">Select a patient</option>'; 
         querySnapshot.forEach((doc) => {
             const patient = doc.data();
             const option = document.createElement('option');
-            option.value = doc.id; // The value is the patient's UID
+            option.value = doc.id; 
             option.textContent = patient.name;
-            option.dataset.name = patient.name; // Store patient name
+            option.dataset.name = patient.name;
             patientSelect.appendChild(option);
         });
     } catch (error) {
         console.error("Error loading patients: ", error);
-        patientSelect.innerHTML = '<option value="">Could not load patients</option>';
     }
 }
 
-// --- DYNAMICALLY ADD MEDICINE FIELDS ---
+// --- DYNAMICALLY ADD MEDICINE FIELDS (REFACTORED) ---
 let medicineCount = 0;
 function addMedicineField() {
     medicineCount++;
-    const medicineDiv = document.createElement('div');
-    medicineDiv.className = 'p-4 border rounded-md space-y-2';
-    medicineDiv.innerHTML = `
-        <h4 class="font-semibold">Medicine ${medicineCount}</h4>
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Medicine Name</label>
-            <input type="text" name="medicineName" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" required>
-        </div>
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Daily Dose</label>
-            <div class="flex items-center space-x-4 mt-1">
-                <label><input type="checkbox" name="doseMorning" class="form-checkbox"> Morning</label>
-                <label><input type="checkbox" name="doseNoon" class="form-checkbox"> Noon</label>
-                <label><input type="checkbox" name="doseNight" class="form-checkbox"> Night</label>
-            </div>
-        </div>
-    `;
-    medicinesContainer.appendChild(medicineDiv);
+    
+    // 1. Clone the template content
+    const templateContent = medicineTemplate.content.cloneNode(true);
+    
+    // 2. The template gives us a document-fragment. We find our main div inside it.
+    const newMedicineDiv = templateContent.querySelector('.p-4');
+
+    // 3. Create and prepend the dynamic heading
+    const heading = document.createElement('h4');
+    heading.className = 'font-semibold text-gray-700';
+    heading.textContent = `Medicine ${medicineCount}`;
+    newMedicineDiv.prepend(heading); // Add the title to the top of the new section
+    
+    // 4. Append the new, complete section to the container
+    medicinesContainer.appendChild(newMedicineDiv);
 }
 
 addMedicineBtn.addEventListener('click', addMedicineField);
 
-// --- FORM SUBMISSION LOGIC ---
+// --- FORM SUBMISSION LOGIC (No changes needed here) ---
 prescriptionForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    // Get selected patient info
     const selectedOption = patientSelect.options[patientSelect.selectedIndex];
     const patientId = selectedOption.value;
     const patientName = selectedOption.dataset.name;
-    const totalDays = parseInt(prescriptionForm.querySelector('#total-days').value, 10);
 
-    // Collect medicine data
     const medicines = [];
-    const medicineDivs = medicinesContainer.querySelectorAll('.p-4');
+    // The query selector '.p-4.border' is still valid as our template creates this structure
+    const medicineDivs = medicinesContainer.querySelectorAll('.p-4.border');
+    
+    let formIsValid = true;
     medicineDivs.forEach(div => {
         const medicineName = div.querySelector('input[name="medicineName"]').value;
+        const totalDays = parseInt(div.querySelector('input[name="totalDays"]').value, 10);
         const morning = div.querySelector('input[name="doseMorning"]').checked;
         const noon = div.querySelector('input[name="doseNoon"]').checked;
         const night = div.querySelector('input[name="doseNight"]').checked;
         
-        medicines.push({
-            name: medicineName,
-            dose: { morning: morning ? 1 : 0, noon: noon ? 1 : 0, night: night ? 1 : 0 },
-            // These will be used later
-            stockCount: 0,
-            remainingCount: 0
-        });
+        if (!morning && !noon && !night) {
+             alert(`Please select at least one dose (Morning, Noon, or Night) for ${medicineName}.`);
+             formIsValid = false;
+        }
+
+        if (medicineName && totalDays > 0) {
+            medicines.push({
+                name: medicineName, totalDays: totalDays,
+                dose: { morning: morning ? 1 : 0, noon: noon ? 1 : 0, night: night ? 1 : 0 },
+                stockCount: 0, remainingCount: 0
+            });
+        }
     });
 
+    if (!formIsValid) return;
+
     if (!patientId || medicines.length === 0) {
-        alert("Please select a patient and add at least one medicine.");
+        alert("Please select a patient and fill out all medicine details.");
         return;
     }
 
     try {
-        // Create a new document in the 'prescriptions' collection
         await addDoc(collection(db, "prescriptions"), {
-            patientId: patientId,
-            patientName: patientName,
-            doctorId: doctorId,
-            doctorName: doctorName,
-            startDate: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
-            totalDays: totalDays,
+            patientId, patientName, doctorId, doctorName,
+            startDate: new Date().toISOString().split('T')[0],
             status: "active",
             medicines: medicines
         });
-
         successMessage.textContent = "Prescription saved successfully!";
         prescriptionForm.reset();
-        medicinesContainer.innerHTML = ""; // Clear medicine fields
-        addMedicineField(); // Add one back for the next entry
-        
-        // Hide success message after 3 seconds
+        medicinesContainer.innerHTML = "";
+        medicineCount = 0; // Reset counter
+        addMedicineField();
         setTimeout(() => { successMessage.textContent = ""; }, 3000);
 
     } catch (error) {

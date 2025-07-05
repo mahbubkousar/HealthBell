@@ -11,18 +11,15 @@ onAuthStateChanged(auth, async (user) => {
     if (user) {
         const uid = user.uid;
         
-        // Check user role
         const userDocRef = doc(db, "users", uid);
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists() && userDoc.data().role === 'patient') {
             welcomeName.textContent = `Welcome, ${userDoc.data().name}!`;
             loadPrescriptions(uid);
         } else {
-            // Not a patient, redirect
             window.location.href = '/login.html';
         }
     } else {
-        // User not logged in
         window.location.href = '/login.html';
     }
 });
@@ -31,8 +28,6 @@ onAuthStateChanged(auth, async (user) => {
 logoutButton.addEventListener('click', () => {
     signOut(auth).then(() => {
         window.location.href = '/login.html';
-    }).catch((error) => {
-        console.error("Sign out error", error);
     });
 });
 
@@ -50,7 +45,7 @@ async function loadPrescriptions(patientId) {
             return;
         }
 
-        prescriptionsList.innerHTML = ''; // Clear loading message
+        prescriptionsList.innerHTML = '';
         querySnapshot.forEach(doc => {
             const prescription = doc.data();
             const prescriptionCard = createPrescriptionCard(prescription);
@@ -63,25 +58,35 @@ async function loadPrescriptions(patientId) {
     }
 }
 
+
+// --- CREATE PRESCRIPTION CARD ---
+// *** MODIFIED FUNCTION ***
 function createPrescriptionCard(prescription) {
     const card = document.createElement('div');
     card.className = 'bg-white p-6 rounded-lg shadow-md';
 
-    let medicinesHtml = '<ul class="list-disc list-inside mt-2 space-y-1">';
+    // Build the list of medicines, now including individual durations
+    let medicinesHtml = '<ul class="list-disc list-inside mt-2 space-y-2">';
     prescription.medicines.forEach(med => {
         const doses = [];
         if (med.dose.morning) doses.push('Morning');
         if (med.dose.noon) doses.push('Noon');
         if (med.dose.night) doses.push('Night');
-        medicinesHtml += `<li><strong>${med.name}</strong> - Doses: ${doses.join(', ')}</li>`;
+        medicinesHtml += `
+            <li>
+                <strong>${med.name}</strong> - for ${med.totalDays} days
+                <br>
+                <span class="text-sm text-gray-600">Dose: ${doses.join(', ')}</span>
+            </li>`;
     });
     medicinesHtml += '</ul>';
 
+    // The main card no longer shows a single duration
     card.innerHTML = `
         <div class="flex justify-between items-start">
             <div>
                 <h3 class="text-xl font-bold text-gray-800">Prescription from Dr. ${prescription.doctorName}</h3>
-                <p class="text-sm text-gray-500">Date: ${prescription.startDate} | Duration: ${prescription.totalDays} days</p>
+                <p class="text-sm text-gray-500">Date: ${prescription.startDate}</p>
             </div>
             <span class="text-sm font-semibold py-1 px-3 rounded-full ${prescription.status === 'active' ? 'bg-green-200 text-green-800' : 'bg-gray-200 text-gray-800'}">
                 ${prescription.status}
