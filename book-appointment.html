@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Appointment - HealthBell</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+
+    <!-- Navbar -->
+    <nav class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex-shrink-0 flex items-center">
+                    <h1 class="text-xl font-bold text-blue-600">HealthBell - Patient Portal</h1>
+                </div>
+                <div class="flex items-center">
+                    <a href="/patient-dashboard.html" class="mr-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded">
+                        ← Back to Dashboard
+                    </a>
+                    <button id="logout-button" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div class="bg-white p-8 rounded-lg shadow-md">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">Book a New Appointment</h2>
+            
+            <!-- Step 1: Select a Doctor -->
+            <div class="mb-6">
+                <label for="doctor-select" class="block text-gray-700 text-sm font-bold mb-2">1. Select a Doctor:</label>
+                <select id="doctor-select" class="shadow border rounded w-full md:w-1/2 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                    <option value="">Loading doctors...</option>
+                </select>
+            </div>
+            
+            <!-- Step 2: Choose an available slot -->
+            <div id="calendar-container" class="hidden">
+                 <label class="block text-gray-700 text-sm font-bold mb-2">2. Choose an Available Slot (Next 7 Days):</label>
+                 <div id="calendar-grid" class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-4 mt-2">
+                    <!-- Calendar days and slots will be generated here -->
+                 </div>
+            </div>
+            <p id="feedback-message" class="text-center mt-4 font-semibold"></p>
+        </div>
+    </main>
+
+    <!-- Firebase SDKs & Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js" type="module"></script>
+    <script src="firebase-config.js" type="module"></script>
+    <script src="assets/booking.js" type="module"></script>
+</body>
+</html>
