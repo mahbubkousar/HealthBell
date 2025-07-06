@@ -7,74 +7,80 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100">
- 
-    <!-- Inside doctor-dashboard.html -->
-<nav class="bg-white shadow-md">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16">
-            <div class="flex-shrink-0 flex items-center">
-                <h1 class="text-xl font-bold text-blue-600">HealthBell - Doctor Portal</h1>
-            </div>
-            <div class="flex items-center">
-                <!-- NEW BUTTON HERE -->
-                <a href="/manage-schedule.html" class="mr-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded">
-                    Manage Schedule
-                </a>
-                <button id="logout-button" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
-                    Logout
-                </button>
+
+    <!-- Navbar -->
+    <nav class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex-shrink-0 flex items-center">
+                    <h1 class="text-xl font-bold text-blue-600">HealthBell - Doctor Portal</h1>
+                </div>
+                <div class="flex items-center">
+                    <a href="/manage-schedule.html" class="mr-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded">
+                        Manage Schedule
+                    </a>
+                    <button id="logout-button" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+                        Logout
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
-</nav>
-    <!-- Navbar -->
+    </nav>
 
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div class="space-y-6">
-            <!-- Card 1: Create Prescription -->
-            <div class="bg-white p-8 rounded-lg shadow-md">
-                <h2 class="text-2xl font-bold mb-6 text-gray-800">Create New Prescription</h2>
-                <form id="prescription-form">
-                    <div class="mb-4">
-                        <label for="patient-select" class="block text-gray-700 text-sm font-bold mb-2">Select Patient:</label>
-                        <select id="patient-select" name="patient" class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
-                            <option value="">Loading patients...</option>
-                        </select>
-                    </div>
-                    <div id="medicines-container" class="space-y-4 mb-4"></div>
-                    <template id="medicine-template">
-                        <div class="p-4 border rounded-md space-y-3 bg-gray-50">
-                            <div><label class="block text-sm font-medium text-gray-700">Medicine Name</label><input type="text" name="medicineName" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2" required></div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div><label class="block text-sm font-medium text-gray-700">Duration (in days)</label><input type="number" name="totalDays" class="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2" min="1" required></div>
-                                <div><label class="block text-sm font-medium text-gray-700">Daily Dose</label><div class="flex items-center space-x-4 mt-2">
-                                    <label class="flex items-center"><input type="checkbox" name="doseMorning" class="form-checkbox h-4 w-4"> <span class="ml-2">Morning</span></label>
-                                    <label class="flex items-center"><input type="checkbox" name="doseNoon" class="form-checkbox h-4 w-4"> <span class="ml-2">Noon</span></label>
-                                    <label class="flex items-center"><input type="checkbox" name="doseNight" class="form-checkbox h-4 w-4"> <span class="ml-2">Night</span></label>
-                                </div></div>
-                            </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Left Column -->
+            <div class="space-y-6">
+                <!-- Card 1: Create Prescription -->
+                <div class="bg-white p-8 rounded-lg shadow-md">
+                    <h2 class="text-2xl font-bold mb-6 text-gray-800">Create New Prescription</h2>
+                    <form id="prescription-form">
+                        <div class="mb-4">
+                            <label for="patient-select" class="block text-gray-700 text-sm font-bold mb-2">Select Patient:</label>
+                            <select id="patient-select" name="patient" class="shadow border rounded w-full py-2 px-3 text-gray-700" required></select>
                         </div>
-                    </template>
-                    <button type="button" id="add-medicine-btn" class="mb-6 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">+ Add Another Medicine</button>
-                    <div class="flex items-center justify-end">
-                        <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Save Prescription</button>
+                        <div id="medicines-container" class="space-y-4 mb-4"></div>
+                        <template id="medicine-template">
+                            <div class="p-4 border rounded-md space-y-3 bg-gray-50">
+                                <div><label class="block text-sm font-medium">Medicine Name</label><input type="text" name="medicineName" class="mt-1 block w-full p-2 border-gray-300 rounded-md" required></div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div><label class="block text-sm font-medium">Duration (days)</label><input type="number" name="totalDays" class="mt-1 block w-full p-2 border-gray-300 rounded-md" min="1" required></div>
+                                    <div><label class="block text-sm font-medium">Daily Dose</label><div class="flex items-center space-x-4 mt-2">
+                                        <label class="flex items-center"><input type="checkbox" name="doseMorning" class="h-4 w-4"> <span class="ml-2">Morning</span></label>
+                                        <label class="flex items-center"><input type="checkbox" name="doseNoon" class="h-4 w-4"> <span class="ml-2">Noon</span></label>
+                                        <label class="flex items-center"><input type="checkbox" name="doseNight" class="h-4 w-4"> <span class="ml-2">Night</span></label>
+                                    </div></div>
+                                </div>
+                            </div>
+                        </template>
+                        <button type="button" id="add-medicine-btn" class="mb-6 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">+ Add Medicine</button>
+                        <div class="flex justify-end"><button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Save Prescription</button></div>
+                    </form>
+                    <p id="success-message" class="text-green-600 text-center mt-4"></p>
+                </div>
+
+                <!-- Card 2: Adherence Report -->
+                <div class="bg-white p-8 rounded-lg shadow-md">
+                    <h2 class="text-2xl font-bold mb-6 text-gray-800">Patient Adherence Report</h2>
+                    <div class="mb-4">
+                        <label for="patient-adherence-select" class="block text-gray-700 text-sm font-bold mb-2">Select Patient:</label>
+                        <select id="patient-adherence-select" class="shadow border rounded w-full py-2 px-3 text-gray-700"></select>
                     </div>
-                </form>
-                <p id="success-message" class="text-green-500 text-center mt-4"></p>
+                    <div id="adherence-report-container" class="mt-6 border-t pt-4">
+                        <p class="text-center text-gray-500">Select a patient to see their adherence.</p>
+                    </div>
+                </div>
             </div>
 
-            <!-- NEW Card 2: Adherence Report -->
-            <div class="bg-white p-8 rounded-lg shadow-md">
-                <h2 class="text-2xl font-bold mb-6 text-gray-800">Patient Adherence Report</h2>
-                <div class="mb-4">
-                    <label for="patient-adherence-select" class="block text-gray-700 text-sm font-bold mb-2">Select a Patient to View Their Log:</label>
-                    <select id="patient-adherence-select" class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                        <option value="">Loading patients...</option>
-                    </select>
-                </div>
-                <div id="adherence-report-container" class="mt-6 border-t pt-4">
-                    <p class="text-center text-gray-500">Please select a patient to see their adherence history.</p>
+            <!-- Right Column -->
+            <div class="space-y-6">
+                <!-- NEW Card 3: Appointment Requests -->
+                <div class="bg-white p-8 rounded-lg shadow-md">
+                    <h2 class="text-2xl font-bold mb-6 text-gray-800">Appointment Requests</h2>
+                    <div id="appointment-requests-container" class="space-y-4">
+                        <p class="text-center text-gray-500">Loading requests...</p>
+                    </div>
                 </div>
             </div>
         </div>
