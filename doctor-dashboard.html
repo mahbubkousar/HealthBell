@@ -30,9 +30,28 @@
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Left Column -->
+            <!-- Left Column: Appointments & Scheduling -->
             <div class="space-y-6">
-                <!-- Card 1: Create Prescription -->
+                <!-- Appointment Requests -->
+                <div class="bg-white p-8 rounded-lg shadow-md">
+                    <h2 class="text-2xl font-bold mb-6 text-gray-800">Appointment Requests</h2>
+                    <div id="appointment-requests-container" class="space-y-4">
+                        <p class="text-center text-gray-500">Loading requests...</p>
+                    </div>
+                </div>
+
+                <!-- Upcoming Confirmed Appointments -->
+                <div class="bg-white p-8 rounded-lg shadow-md">
+                    <h2 class="text-2xl font-bold mb-6 text-gray-800">Upcoming Appointments</h2>
+                    <div id="upcoming-appointments-container" class="space-y-4">
+                        <p class="text-center text-gray-500">Loading schedule...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Prescriptions & Adherence -->
+            <div class="space-y-6">
+                <!-- Create Prescription -->
                 <div class="bg-white p-8 rounded-lg shadow-md">
                     <h2 class="text-2xl font-bold mb-6 text-gray-800">Create New Prescription</h2>
                     <form id="prescription-form">
@@ -60,7 +79,7 @@
                     <p id="success-message" class="text-green-600 text-center mt-4"></p>
                 </div>
 
-                <!-- Card 2: Adherence Report -->
+                <!-- Adherence Report -->
                 <div class="bg-white p-8 rounded-lg shadow-md">
                     <h2 class="text-2xl font-bold mb-6 text-gray-800">Patient Adherence Report</h2>
                     <div class="mb-4">
@@ -69,17 +88,6 @@
                     </div>
                     <div id="adherence-report-container" class="mt-6 border-t pt-4">
                         <p class="text-center text-gray-500">Select a patient to see their adherence.</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right Column -->
-            <div class="space-y-6">
-                <!-- NEW Card 3: Appointment Requests -->
-                <div class="bg-white p-8 rounded-lg shadow-md">
-                    <h2 class="text-2xl font-bold mb-6 text-gray-800">Appointment Requests</h2>
-                    <div id="appointment-requests-container" class="space-y-4">
-                        <p class="text-center text-gray-500">Loading requests...</p>
                     </div>
                 </div>
             </div>
