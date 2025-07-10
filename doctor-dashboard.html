@@ -1,104 +1,231 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Doctor Dashboard - HealthBell</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css"
+    />
     <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100">
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/dashboard.css" />
+    <!-- Reusing the same dashboard styles -->
+  </head>
+  <body class="bg-gray-100">
+    <!-- Header -->
+    <header class="main-header">
+      <div class="container">
+        <a href="/index.html" class="logo">HealthBell</a>
+        <nav class="main-nav">
+          <ul>
+            <li>
+              <a href="/doctor-dashboard.html" class="active">Dashboard</a>
+            </li>
+            <li><a href="/manage-schedule.html">My Schedule</a></li>
+            <li>
+              <button id="logout-button" class="text-red-500 font-semibold">
+                Logout
+              </button>
+            </li>
+          </ul>
+        </nav>
+        <div class="hamburger"><i class="fa-solid fa-bars"></i></div>
+      </div>
+    </header>
 
-    <!-- Navbar -->
-    <nav class="bg-white shadow-md">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex-shrink-0 flex items-center">
-                    <h1 class="text-xl font-bold text-blue-600">HealthBell - Doctor Portal</h1>
-                </div>
-                <div class="flex items-center">
-                    <a href="/manage-schedule.html" class="mr-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded">
-                        Manage Schedule
-                    </a>
-                    <button id="logout-button" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
-                        Logout
+    <div
+      id="loading-overlay"
+      class="fixed inset-0 bg-white bg-opacity-75 z-50 flex items-center justify-center"
+    >
+      <i class="fas fa-spinner fa-spin text-blue-500 text-4xl"></i>
+    </div>
+
+    <main class="dashboard-main container">
+      <h1 class="text-3xl font-bold mb-2">Doctor Portal</h1>
+      <p class="text-gray-500 mb-8">
+        Manage your patients and appointments efficiently.
+      </p>
+
+      <div class="dashboard-grid lg:grid-cols-3">
+        <!-- Row 1: Appointments -->
+        <div class="card lg:col-span-2">
+          <div class="card-header">
+            <i class="fa-solid fa-calendar-plus text-green-500"></i>
+            <h2 class="card-title">Pending Appointment Requests</h2>
+          </div>
+          <div
+            id="appointment-requests-container"
+            class="card-content space-y-3 max-h-60 overflow-y-auto"
+          >
+            <p class="loading-placeholder">Loading requests...</p>
+          </div>
+        </div>
+
+        <div class="card lg:col-span-1">
+          <div class="card-header">
+            <i class="fa-solid fa-clock text-purple-500"></i>
+            <h2 class="card-title">Upcoming Agenda</h2>
+          </div>
+          <div
+            id="upcoming-appointments-container"
+            class="card-content space-y-3 max-h-60 overflow-y-auto"
+          >
+            <p class="loading-placeholder">Loading agenda...</p>
+          </div>
+        </div>
+
+        <!-- Row 2: Prescription and Adherence -->
+        <div class="card lg:col-span-3">
+          <div class="card-header">
+            <i class="fa-solid fa-file-medical text-blue-500"></i>
+            <h2 class="card-title">Create New Prescription</h2>
+          </div>
+          <div class="card-content">
+            <form id="prescription-form" class="space-y-4">
+              <div class="form-group">
+                <label for="patient-select" class="font-semibold text-gray-700"
+                  >Select Patient:</label
+                >
+                <select
+                  id="patient-select"
+                  name="patient"
+                  class="w-full p-2 border rounded-md mt-1"
+                  required
+                ></select>
+              </div>
+              <div id="medicines-container" class="space-y-4"></div>
+
+              <template id="medicine-template">
+                <div class="p-4 border rounded-lg bg-gray-50 space-y-3">
+                  <div class="flex justify-between items-center">
+                    <h4 class="font-semibold text-gray-700">New Medicine</h4>
+                    <button
+                      type="button"
+                      class="remove-medicine-btn font-bold text-red-500 hover:text-red-700"
+                    >
+                      × Remove
                     </button>
+                  </div>
+                  <input
+                    type="text"
+                    name="medicineName"
+                    class="w-full p-2 border rounded-md"
+                    placeholder="Medicine Name"
+                    required
+                  />
+                  <div class="grid grid-cols-2 gap-4">
+                    <input
+                      type="number"
+                      name="totalDays"
+                      class="w-full p-2 border rounded-md"
+                      placeholder="Duration (days)"
+                      min="1"
+                      required
+                    />
+                    <div class="flex items-center justify-around space-x-2">
+                      <label class="flex items-center cursor-pointer"
+                        ><input
+                          type="checkbox"
+                          name="doseMorning"
+                          class="h-4 w-4"
+                        />
+                        <span class="ml-1 text-sm">Morning</span></label
+                      >
+                      <label class="flex items-center cursor-pointer"
+                        ><input
+                          type="checkbox"
+                          name="doseNoon"
+                          class="h-4 w-4"
+                        />
+                        <span class="ml-1 text-sm">Noon</span></label
+                      >
+                      <label class="flex items-center cursor-pointer"
+                        ><input
+                          type="checkbox"
+                          name="doseNight"
+                          class="h-4 w-4"
+                        />
+                        <span class="ml-1 text-sm">Night</span></label
+                      >
+                    </div>
+                  </div>
                 </div>
-            </div>
+              </template>
+
+              <div class="flex justify-between items-center pt-2">
+                <button
+                  type="button"
+                  id="add-medicine-btn"
+                  class="btn bg-green-500 text-white py-2 px-4 text-sm"
+                >
+                  + Add Medicine
+                </button>
+                <button type="submit" class="btn btn-primary">
+                  Save Prescription
+                </button>
+              </div>
+              <p
+                id="success-message"
+                class="text-green-600 text-center font-semibold pt-2"
+              ></p>
+            </form>
+          </div>
         </div>
-    </nav>
 
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Left Column: Appointments & Scheduling -->
-            <div class="space-y-6">
-                <!-- Appointment Requests -->
-                <div class="bg-white p-8 rounded-lg shadow-md">
-                    <h2 class="text-2xl font-bold mb-6 text-gray-800">Appointment Requests</h2>
-                    <div id="appointment-requests-container" class="space-y-4">
-                        <p class="text-center text-gray-500">Loading requests...</p>
-                    </div>
-                </div>
-
-                <!-- Upcoming Confirmed Appointments -->
-                <div class="bg-white p-8 rounded-lg shadow-md">
-                    <h2 class="text-2xl font-bold mb-6 text-gray-800">Upcoming Appointments</h2>
-                    <div id="upcoming-appointments-container" class="space-y-4">
-                        <p class="text-center text-gray-500">Loading schedule...</p>
-                    </div>
-                </div>
+        <div class="card lg:col-span-3">
+          <div class="card-header">
+            <i class="fa-solid fa-chart-line text-teal-500"></i>
+            <h2 class="card-title">Patient Adherence Report</h2>
+          </div>
+          <div class="card-content">
+            <div class="mb-4">
+              <label
+                for="patient-adherence-select"
+                class="font-semibold text-gray-700"
+                >Select Patient to View Report:</label
+              >
+              <select
+                id="patient-adherence-select"
+                class="w-full md:w-1/2 p-2 border rounded-md mt-1"
+              ></select>
             </div>
-
-            <!-- Right Column: Prescriptions & Adherence -->
-            <div class="space-y-6">
-                <!-- Create Prescription -->
-                <div class="bg-white p-8 rounded-lg shadow-md">
-                    <h2 class="text-2xl font-bold mb-6 text-gray-800">Create New Prescription</h2>
-                    <form id="prescription-form">
-                        <div class="mb-4">
-                            <label for="patient-select" class="block text-gray-700 text-sm font-bold mb-2">Select Patient:</label>
-                            <select id="patient-select" name="patient" class="shadow border rounded w-full py-2 px-3 text-gray-700" required></select>
-                        </div>
-                        <div id="medicines-container" class="space-y-4 mb-4"></div>
-                        <template id="medicine-template">
-                            <div class="p-4 border rounded-md space-y-3 bg-gray-50">
-                                <div><label class="block text-sm font-medium">Medicine Name</label><input type="text" name="medicineName" class="mt-1 block w-full p-2 border-gray-300 rounded-md" required></div>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div><label class="block text-sm font-medium">Duration (days)</label><input type="number" name="totalDays" class="mt-1 block w-full p-2 border-gray-300 rounded-md" min="1" required></div>
-                                    <div><label class="block text-sm font-medium">Daily Dose</label><div class="flex items-center space-x-4 mt-2">
-                                        <label class="flex items-center"><input type="checkbox" name="doseMorning" class="h-4 w-4"> <span class="ml-2">Morning</span></label>
-                                        <label class="flex items-center"><input type="checkbox" name="doseNoon" class="h-4 w-4"> <span class="ml-2">Noon</span></label>
-                                        <label class="flex items-center"><input type="checkbox" name="doseNight" class="h-4 w-4"> <span class="ml-2">Night</span></label>
-                                    </div></div>
-                                </div>
-                            </div>
-                        </template>
-                        <button type="button" id="add-medicine-btn" class="mb-6 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">+ Add Medicine</button>
-                        <div class="flex justify-end"><button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Save Prescription</button></div>
-                    </form>
-                    <p id="success-message" class="text-green-600 text-center mt-4"></p>
-                </div>
-
-                <!-- Adherence Report -->
-                <div class="bg-white p-8 rounded-lg shadow-md">
-                    <h2 class="text-2xl font-bold mb-6 text-gray-800">Patient Adherence Report</h2>
-                    <div class="mb-4">
-                        <label for="patient-adherence-select" class="block text-gray-700 text-sm font-bold mb-2">Select Patient:</label>
-                        <select id="patient-adherence-select" class="shadow border rounded w-full py-2 px-3 text-gray-700"></select>
-                    </div>
-                    <div id="adherence-report-container" class="mt-6 border-t pt-4">
-                        <p class="text-center text-gray-500">Select a patient to see their adherence.</p>
-                    </div>
-                </div>
+            <div id="adherence-report-container" class="mt-4 border-t pt-4">
+              <p class="loading-placeholder">Please select a patient.</p>
             </div>
+          </div>
         </div>
+      </div>
     </main>
 
-    <!-- Firebase SDKs & Scripts -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js" type="module"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js" type="module"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js" type="module"></script>
+    <footer class="main-footer">
+      <div class="container">
+        <p>© 2024 HealthBell. All Rights Reserved.</p>
+      </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="assets/main.js"></script>
+    <script
+      src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"
+      type="module"
+    ></script>
+    <script
+      src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"
+      type="module"
+    ></script>
+    <script
+      src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"
+      type="module"
+    ></script>
     <script src="firebase-config.js" type="module"></script>
     <script src="assets/doctor.js" type="module"></script>
-</body>
+  </body>
 </html>

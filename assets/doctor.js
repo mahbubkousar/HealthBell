@@ -16,6 +16,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
 // --- DOM Element References ---
+const loadingOverlay = document.getElementById("loading-overlay");
 const logoutButton = document.getElementById("logout-button");
 const prescriptionForm = document.getElementById("prescription-form");
 const patientSelect = document.getElementById("patient-select");
@@ -34,24 +35,19 @@ const appointmentRequestsContainer = document.getElementById(
 );
 const upcomingAppointmentsContainer = document.getElementById(
   "upcoming-appointments-container"
-); // NEW
+);
 
 let doctorId, doctorName;
 let medicineCount = 0;
 
-// --- AUTHENTICATION & INITIALIZATION ---
+// --- AUTHENTICATION & MASTER DATA LOADING ---
 onAuthStateChanged(auth, async (user) => {
   if (user) {
-    const userDocRef = doc(db, "users", user.uid);
-    const userDoc = await getDoc(userDocRef);
+    const userDoc = await getDoc(doc(db, "users", user.uid));
     if (userDoc.exists() && userDoc.data().role === "doctor") {
       doctorId = user.uid;
       doctorName = userDoc.data().name;
-      // Load all necessary data on login
-      loadPatients();
-      loadAppointmentRequests();
-      loadUpcomingAppointments(); // NEW
-      addMedicineField();
+      await loadAllDoctorData();
     } else {
       window.location.href = "/login.html";
     }
@@ -60,15 +56,29 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-// --- LOGOUT LOGIC ---
+async function loadAllDoctorData() {
+  loadingOverlay.style.display = "flex";
+  try {
+    await Promise.all([
+      loadPatients(),
+      loadAppointmentRequests(),
+      loadUpcomingAppointments(),
+    ]);
+    addMedicineField();
+  } catch (error) {
+    console.error("Error loading doctor dashboard data:", error);
+  } finally {
+    loadingOverlay.style.display = "none";
+  }
+}
+
+// --- LOGOUT ---
 logoutButton.addEventListener("click", () => {
   signOut(auth).then(() => (window.location.href = "/login.html"));
 });
 
-// --- APPOINTMENT MANAGEMENT LOGIC ---
+// --- APPOINTMENT MANAGEMENT ---
 async function loadAppointmentRequests() {
-  appointmentRequestsContainer.innerHTML =
-    '<p class="text-center text-gray-500">Loading requests...</p>';
   try {
     const q = query(
       collection(db, "appointments"),
@@ -77,307 +87,301 @@ async function loadAppointmentRequests() {
       orderBy("createdAt", "asc")
     );
     const querySnapshot = await getDocs(q);
-
     if (querySnapshot.empty) {
       appointmentRequestsContainer.innerHTML =
-        '<p class="text-center text-gray-500">No pending appointment requests.</p>';
+        '<p class="loading-placeholder">No pending requests.</p>';
       return;
     }
-
-    appointmentRequestsContainer.innerHTML = "";
-    querySnapshot.forEach((doc) => {
-      const request = doc.data();
-      const requestCard = document.createElement("div");
-      requestCard.className =
-        "p-4 border rounded-lg bg-gray-50 appointment-card";
-      requestCard.dataset.id = doc.id;
-      requestCard.innerHTML = `
-                <p class="font-semibold text-gray-800">${
-                  request.patientName
-                }</p>
-                <p class="text-sm text-gray-600">${new Date(
-                  request.slotDateTime
-                ).toLocaleString()}</p>
-                <div class="mt-3 flex gap-2">
-                    <button class="approve-btn bg-green-500 hover:bg-green-600 text-white text-sm font-bold py-1 px-3 rounded" data-id="${
-                      doc.id
-                    }">Approve</button>
-                    <button class="reject-btn bg-red-500 hover:bg-red-600 text-white text-sm font-bold py-1 px-3 rounded" data-id="${
-                      doc.id
-                    }">Reject</button>
-                </div>
-            `;
-      appointmentRequestsContainer.appendChild(requestCard);
-    });
+    appointmentRequestsContainer.innerHTML = querySnapshot.docs
+      .map((doc) => {
+        const request = doc.data();
+        return `<div class="p-4 border rounded-lg bg-gray-50 flex justify-between items-center"><div class="flex-1"><p class="font-semibold text-gray-800">${
+          request.patientName
+        }</p><p class="text-sm text-gray-600">${new Date(
+          request.slotDateTime
+        ).toLocaleString()}</p></div><div class="flex gap-2"><button class="approve-btn btn bg-green-500 text-white text-xs py-1 px-3" data-id="${
+          doc.id
+        }">Approve</button><button class="reject-btn btn bg-red-500 text-white text-xs py-1 px-3" data-id="${
+          doc.id
+        }">Reject</button></div></div>`;
+      })
+      .join("");
   } catch (error) {
     console.error("Error loading appointment requests: ", error);
     appointmentRequestsContainer.innerHTML =
-      '<p class="text-center text-red-500">Could not load requests. An index may be required.</p>';
+      '<p class="loading-placeholder text-red-500">Could not load requests.</p>';
   }
 }
 
 appointmentRequestsContainer.addEventListener("click", async (e) => {
-  const button = e.target;
+  const button = e.target.closest(".approve-btn, .reject-btn");
+  if (!button) return;
+  button.disabled = true;
   const appointmentId = button.dataset.id;
-  if (!appointmentId) return;
-
-  let newStatus = "";
-  if (button.classList.contains("approve-btn")) {
-    newStatus = "confirmed";
-  } else if (button.classList.contains("reject-btn")) {
-    newStatus = "rejected";
-  }
-
-  if (newStatus) {
-    try {
-      const appointmentRef = doc(db, "appointments", appointmentId);
-      await updateDoc(appointmentRef, { status: newStatus });
-      button.closest(".appointment-card").remove(); // Remove the card from the list
-      loadUpcomingAppointments(); // Refresh upcoming list after approval
-    } catch (error) {
-      console.error("Error updating appointment status: ", error);
-      alert("Failed to update status. Please try again.");
-    }
+  const newStatus = button.classList.contains("approve-btn")
+    ? "confirmed"
+    : "rejected";
+  try {
+    await updateDoc(doc(db, "appointments", appointmentId), {
+      status: newStatus,
+    });
+    // Instead of removing, we can just reload the lists for consistency
+    await Promise.all([loadAppointmentRequests(), loadUpcomingAppointments()]);
+  } catch (error) {
+    console.error("Error updating appointment status: ", error);
+    button.disabled = false;
   }
 });
 
-// --- NEW FUNCTION: LOAD UPCOMING APPOINTMENTS ---
+// --- UPCOMING APPOINTMENTS ---
 async function loadUpcomingAppointments() {
-  upcomingAppointmentsContainer.innerHTML =
-    '<p class="text-center text-gray-500">Loading schedule...</p>';
   try {
-    const now = new Date().toISOString();
+    const today = new Date();
+    const inOneWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
     const q = query(
       collection(db, "appointments"),
       where("doctorId", "==", doctorId),
       where("status", "==", "confirmed"),
-      where("slotDateTime", ">=", now),
+      where("slotDateTime", ">=", today.toISOString()),
+      where("slotDateTime", "<=", inOneWeek.toISOString()),
       orderBy("slotDateTime", "asc")
     );
     const querySnapshot = await getDocs(q);
-
     if (querySnapshot.empty) {
       upcomingAppointmentsContainer.innerHTML =
-        '<p class="text-center text-gray-500">No upcoming appointments.</p>';
+        '<p class="loading-placeholder">No upcoming appointments in the next 7 days.</p>';
       return;
     }
-
-    upcomingAppointmentsContainer.innerHTML = "";
-    querySnapshot.forEach((doc) => {
-      const appointment = doc.data();
-      const appointmentCard = document.createElement("div");
-      appointmentCard.className = "p-4 border rounded-lg bg-blue-50";
-      appointmentCard.innerHTML = `
-                <p class="font-semibold text-blue-800">${
-                  appointment.patientName
-                }</p>
-                <p class="text-sm text-blue-600">${new Date(
-                  appointment.slotDateTime
-                ).toLocaleString()}</p>
-            `;
-      upcomingAppointmentsContainer.appendChild(appointmentCard);
-    });
+    upcomingAppointmentsContainer.innerHTML = querySnapshot.docs
+      .map((doc) => {
+        const appointment = doc.data();
+        return `<div class="p-3 border-l-4 border-purple-500 bg-purple-50 rounded-r-lg"><p class="font-semibold text-gray-800">${
+          appointment.patientName
+        }</p><p class="text-sm text-gray-600">${new Date(
+          appointment.slotDateTime
+        ).toLocaleString([], {
+          dateStyle: "medium",
+          timeStyle: "short",
+        })}</p></div>`;
+      })
+      .join("");
   } catch (error) {
     console.error("Error loading upcoming appointments: ", error);
     upcomingAppointmentsContainer.innerHTML =
-      '<p class="text-center text-red-500">Could not load upcoming appointments. A Firestore index is required.</p>';
+      '<p class="loading-placeholder text-red-500">Could not load agenda. A Firestore index is likely required. Check the console.</p>';
   }
 }
 
-// --- All other functions (loadPatients, adherence report, prescription creation) remain unchanged ---
+// --- LOAD PATIENTS ---
 async function loadPatients() {
-  try {
-    const e = query(collection(db, "users"), where("role", "==", "patient"));
-    const t = await getDocs(e);
-    const o = '<option value="">Select a patient</option>';
-    (patientSelect.innerHTML = o),
-      (patientAdherenceSelect.innerHTML = o),
-      t.forEach((e) => {
-        const t = e.data(),
-          o = document.createElement("option");
-        (o.value = e.id),
-          (o.textContent = t.name),
-          (o.dataset.name = t.name),
-          patientSelect.appendChild(o.cloneNode(!0)),
-          patientAdherenceSelect.appendChild(o.cloneNode(!0));
-      });
-  } catch (e) {
-    console.error("Error loading patients: ", e);
-  }
+  const q = query(collection(db, "users"), where("role", "==", "patient"));
+  const querySnapshot = await getDocs(q);
+  const patientDefaultOption =
+    '<option value="">-- Select a Patient --</option>';
+  patientSelect.innerHTML = patientDefaultOption;
+  patientAdherenceSelect.innerHTML = patientDefaultOption;
+  querySnapshot.forEach((doc) => {
+    const patient = doc.data();
+    const option = document.createElement("option");
+    option.value = doc.id;
+    option.textContent = patient.name;
+    option.dataset.name = patient.name;
+    patientSelect.appendChild(option.cloneNode(true));
+    patientAdherenceSelect.appendChild(option.cloneNode(true));
+  });
 }
+
+// --- ADHERENCE REPORT LOGIC ---
 patientAdherenceSelect.addEventListener("change", (e) => {
-  const t = e.target.value,
-    o = e.target.options[e.target.selectedIndex].text;
-  t
-    ? loadAdherenceReport(t, o)
-    : (adherenceReportContainer.innerHTML =
-        '<p class="text-center text-gray-500">Please select a patient.</p>');
+  const patientId = e.target.value;
+  const patientName = e.target.options[e.target.selectedIndex].text;
+  if (patientId) {
+    loadAdherenceReport(patientId, patientName);
+  } else {
+    adherenceReportContainer.innerHTML =
+      '<p class="loading-placeholder">Please select a patient to see their adherence history.</p>';
+  }
 });
-async function loadAdherenceReport(e, t) {
-  adherenceReportContainer.innerHTML = `<p class="text-center text-gray-500">Calculating report for ${t}...</p>`;
+
+async function loadAdherenceReport(patientId, patientName) {
+  adherenceReportContainer.innerHTML = `<p class="loading-placeholder">Calculating adherence report for ${patientName}...</p>`;
   try {
-    const o = query(
-        collection(db, "medicationLog"),
-        where("patientId", "==", e)
-      ),
-      n = query(
-        collection(db, "prescriptions"),
-        where("patientId", "==", e),
-        where("status", "==", "active")
-      );
-    const [a, i] = await Promise.all([getDocs(o), getDocs(n)]);
-    if (i.empty)
-      return void (adherenceReportContainer.innerHTML = `<div class="text-center p-4 bg-blue-50 rounded-lg"><h4 class="font-semibold text-blue-800">No Active Prescriptions</h4><p class="text-blue-700">${t} has no active prescriptions to track.</p></div>`);
-    const s = new Set();
-    a.forEach((e) => {
-      const t = e.data();
-      s.add(t.dateTaken + "_" + t.medicineName + "_" + t.doseTime);
+    const logQuery = query(
+      collection(db, "medicationLog"),
+      where("patientId", "==", patientId)
+    );
+    const presQuery = query(
+      collection(db, "prescriptions"),
+      where("patientId", "==", patientId),
+      where("status", "==", "active")
+    );
+    const [logSnapshot, presSnapshot] = await Promise.all([
+      getDocs(logQuery),
+      getDocs(presQuery),
+    ]);
+    if (presSnapshot.empty) {
+      adherenceReportContainer.innerHTML = `<div class="text-center p-4 bg-blue-50 rounded-lg"><h4 class="font-semibold text-blue-800">No Active Prescriptions</h4><p class="text-blue-700">${patientName} has no active prescriptions to track.</p></div>`;
+      return;
+    }
+    const takenDoses = new Set();
+    logSnapshot.forEach((doc) => {
+      const log = doc.data();
+      takenDoses.add(`${log.dateTaken}_${log.medicineName}_${log.doseTime}`);
     });
-    const d = {},
-      r = new Date();
-    r.setHours(0, 0, 0, 0),
-      i.forEach((e) => {
-        const t = e.data(),
-          o = new Date(t.startDate + "T00:00:00");
-        t.medicines.forEach((e) => {
-          const t = new Date(o);
-          t.setDate(o.getDate() + e.totalDays);
-          for (
-            let l = new Date(o);
-            l < r && l < t;
-            l.setDate(l.getDate() + 1)
-          ) {
-            const t = l.toISOString().split("T")[0];
-            d[t] || (d[t] = { taken: [], missed: [] }),
-              ["morning", "noon", "night"].forEach((o) => {
-                if (e.dose[o] > 0) {
-                  const r = { name: e.name, doseTime: o };
-                  s.has(t + "_" + e.name + "_" + o)
-                    ? d[t].taken.push(r)
-                    : d[t].missed.push(r);
-                }
-              });
+    const reportData = {};
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    presSnapshot.forEach((doc) => {
+      const prescription = doc.data();
+      const startDate = new Date(prescription.startDate + "T00:00:00");
+      prescription.medicines.forEach((med) => {
+        const endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + med.totalDays);
+        for (
+          let d = new Date(startDate);
+          d < today && d < endDate;
+          d.setDate(d.getDate() + 1)
+        ) {
+          const dateStr = d.toISOString().split("T")[0];
+          if (!reportData[dateStr]) {
+            reportData[dateStr] = { taken: [], missed: [] };
           }
-        });
-      }),
-      renderCombinedReport(d, t);
-  } catch (e) {
-    console.error("Error loading adherence report: ", e),
-      (adherenceReportContainer.innerHTML =
-        '<p class="text-center text-red-500">Could not load report. A Firestore index may be required.</p>');
+          ["morning", "noon", "night"].forEach((doseTime) => {
+            if (med.dose[doseTime] > 0) {
+              const doseKey = `${dateStr}_${med.name}_${doseTime}`;
+              const doseEntry = { name: med.name, doseTime: doseTime };
+              if (takenDoses.has(doseKey)) {
+                reportData[dateStr].taken.push(doseEntry);
+              } else {
+                reportData[dateStr].missed.push(doseEntry);
+              }
+            }
+          });
+        }
+      });
+    });
+    renderCombinedReport(reportData, patientName);
+  } catch (error) {
+    console.error("Error loading adherence report: ", error);
+    adherenceReportContainer.innerHTML =
+      '<p class="loading-placeholder text-red-500">Could not load report.</p>';
   }
 }
-function renderCombinedReport(e, t) {
-  let o = `<h3 class="text-xl font-bold text-gray-800 mb-4">Adherence Log for: ${t}</h3>`;
-  const n = Object.keys(e).sort((e, t) => new Date(t) - new Date(e));
-  if (0 === n.length)
-    return void (adherenceReportContainer.innerHTML = `<div class="text-center p-4 bg-blue-50 rounded-lg"><h4 class="font-semibold text-blue-800">No Past Data</h4><p class="text-blue-700">No medication was scheduled on past days for ${t}.</p></div>`);
-  const a = (e) => {
-    const t = new Date(e + "T00:00:00"),
-      o = new Date(),
-      n = new Date();
-    return (
-      n.setDate(n.getDate() - 1),
-      t.toDateString() === o.toDateString()
-        ? "Today"
-        : t.toDateString() === n.toDateString()
-        ? "Yesterday"
-        : t.toLocaleDateString(void 0, {
-            weekday: "long",
-            month: "long",
-            day: "numeric",
-          })
-    );
+
+function renderCombinedReport(reportData, patientName) {
+  let reportHtml = `<h3 class="text-xl font-bold text-gray-800 mb-4">Adherence Log for: ${patientName}</h3>`;
+  const sortedDates = Object.keys(reportData).sort(
+    (a, b) => new Date(b) - new Date(a)
+  );
+  if (sortedDates.length === 0) {
+    adherenceReportContainer.innerHTML = `<div class="text-center p-4 bg-blue-50 rounded-lg"><h4 class="font-semibold text-blue-800">No Past Data</h4><p class="text-blue-700">No medication was scheduled on past days for ${patientName}.</p></div>`;
+    return;
+  }
+  const formatDate = (dateString) => {
+    const date = new Date(dateString + "T00:00:00");
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (date.toDateString() === today.toDateString()) return "Today";
+    if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
+    return date.toLocaleDateString(undefined, {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+    });
   };
-  n.forEach((t) => {
-    const n = e[t];
-    (o +=
-      '<div class="mb-4"><h4 class="text-md font-bold text-gray-700 bg-gray-100 p-2 rounded-t-md flex justify-between items-center"><span>' +
-      a(t) +
-      "</span>" +
-      (0 === n.missed.length
+  sortedDates.forEach((date) => {
+    const dayData = reportData[date];
+    reportHtml += `<div class="mb-4"><h4 class="text-md font-bold text-gray-700 bg-gray-100 p-2 rounded-t-md flex justify-between items-center"><span>${formatDate(
+      date
+    )}</span>${
+      dayData.missed.length === 0
         ? '<span class="text-sm font-semibold text-green-600">Perfect Day!</span>'
-        : "") +
-      '</h4><div class="border rounded-b-md divide-y divide-gray-200">'),
-      n.taken.forEach((e) => {
-        o +=
-          '<div class="p-3 flex items-center"><span class="text-green-500 mr-3">✅</span><div><span class="font-semibold text-gray-800">' +
-          e.name +
-          '</span><span class="text-sm ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded-full">' +
-          e.doseTime +
-          "</span></div></div>";
-      }),
-      n.missed.forEach((e) => {
-        o +=
-          '<div class="p-3 flex items-center bg-red-50"><span class="text-red-500 mr-3">❌</span><div><span class="font-semibold text-gray-800">' +
-          e.name +
-          '</span><span class="text-sm ml-2 px-2 py-1 bg-red-100 text-red-800 rounded-full">' +
-          e.doseTime +
-          "</span></div></div>";
-      }),
-      (o += "</div></div>");
-  }),
-    (adherenceReportContainer.innerHTML = o);
+        : ""
+    }</h4><div class="border rounded-b-md divide-y divide-gray-200">`;
+    dayData.taken.forEach((log) => {
+      reportHtml += `<div class="p-3 flex items-center"><span class="text-green-500 mr-3">✅</span><div><span class="font-semibold text-gray-800">${log.name}</span><span class="text-sm ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded-full">${log.doseTime}</span></div></div>`;
+    });
+    dayData.missed.forEach((log) => {
+      reportHtml += `<div class="p-3 flex items-center bg-red-50"><span class="text-red-500 mr-3">❌</span><div><span class="font-semibold text-gray-800">${log.name}</span><span class="text-sm ml-2 px-2 py-1 bg-red-100 text-red-800 rounded-full">${log.doseTime}</span></div></div>`;
+    });
+    reportHtml += `</div></div>`;
+  });
+  adherenceReportContainer.innerHTML = reportHtml;
 }
+
+// --- PRESCRIPTION CREATION LOGIC ---
 function addMedicineField() {
   medicineCount++;
-  const e = medicineTemplate.content.cloneNode(!0),
-    t = e.querySelector(".p-4"),
-    o = document.createElement("h4");
-  (o.className = "font-semibold text-gray-700"),
-    (o.textContent = `Medicine ${medicineCount}`),
-    t.prepend(o),
-    medicinesContainer.appendChild(t);
+  const templateContent = medicineTemplate.content.cloneNode(true);
+  const newMedicineDiv = templateContent.firstElementChild;
+  newMedicineDiv.querySelector("h4").textContent = `Medicine #${medicineCount}`;
+  medicinesContainer.appendChild(newMedicineDiv);
 }
+medicinesContainer.addEventListener("click", (e) => {
+  if (e.target.classList.contains("remove-medicine-btn")) {
+    e.target.closest(".p-4").remove();
+  }
+});
 addMedicineBtn.addEventListener("click", addMedicineField);
 prescriptionForm.addEventListener("submit", async (e) => {
   e.preventDefault();
-  const t = patientSelect.options[patientSelect.selectedIndex],
-    o = t.value,
-    n = t.dataset.name,
-    a = [],
-    i = medicinesContainer.querySelectorAll(".p-4.border");
-  let d = !0;
-  i.forEach((e) => {
-    const t = e.querySelector('input[name="medicineName"]').value,
-      o = parseInt(e.querySelector('input[name="totalDays"]').value, 10),
-      n = e.querySelector('input[name="doseMorning"]').checked,
-      i = e.querySelector('input[name="doseNoon"]').checked,
-      s = e.querySelector('input[name="doseNight"]').checked;
-    n || i || s
-      ? (t &&
-          o > 0 &&
-          a.push({
-            name: t,
-            totalDays: o,
-            dose: { morning: n ? 1 : 0, noon: i ? 1 : 0, night: s ? 1 : 0 },
-            stockCount: 0,
-            remainingCount: 0,
-          }),
-        0)
-      : alert(
-          `Please select at least one dose (Morning, Noon, or Night) for ${t}.`,
-          (d = !1)
-        );
-  }),
-    d &&
-      (o && 0 !== a.length
-        ? (await addDoc(collection(db, "prescriptions"), {
-            patientId: o,
-            patientName: n,
-            doctorId,
-            doctorName,
-            startDate: new Date().toISOString().split("T")[0],
-            status: "active",
-            medicines: a,
-          }),
-          (successMessage.textContent = "Prescription saved successfully!"),
-          prescriptionForm.reset(),
-          (medicinesContainer.innerHTML = ""),
-          (medicineCount = 0),
-          addMedicineField(),
-          setTimeout(() => {
-            successMessage.textContent = "";
-          }, 3e3))
-        : alert("Please select a patient and fill out all medicine details."));
+  const selectedOption = patientSelect.options[patientSelect.selectedIndex];
+  const patientId = selectedOption.value;
+  if (!patientId) {
+    alert("Please select a patient.");
+    return;
+  }
+  const patientName = selectedOption.dataset.name;
+  const medicines = [];
+  const medicineDivs = medicinesContainer.querySelectorAll(".p-4");
+  if (medicineDivs.length === 0) {
+    alert("Please add at least one medicine.");
+    return;
+  }
+  let formIsValid = true;
+  medicineDivs.forEach((div) => {
+    const nameInput = div.querySelector('[name="medicineName"]');
+    const daysInput = div.querySelector('[name="totalDays"]');
+    if (!nameInput.value || !daysInput.value) {
+      formIsValid = false;
+    }
+    medicines.push({
+      name: nameInput.value,
+      totalDays: parseInt(daysInput.value),
+      dose: {
+        morning: div.querySelector('[name="doseMorning"]').checked ? 1 : 0,
+        noon: div.querySelector('[name="doseNoon"]').checked ? 1 : 0,
+        night: div.querySelector('[name="doseNight"]').checked ? 1 : 0,
+      },
+      stockCount: 0,
+      remainingCount: 0,
+    });
+  });
+  if (!formIsValid) {
+    alert("Please fill out all fields for each medicine.");
+    return;
+  }
+  try {
+    await addDoc(collection(db, "prescriptions"), {
+      patientId,
+      patientName,
+      doctorId,
+      doctorName,
+      startDate: new Date().toISOString().split("T")[0],
+      status: "active",
+      medicines,
+    });
+    successMessage.textContent = "Prescription saved successfully!";
+    prescriptionForm.reset();
+    medicinesContainer.innerHTML = "";
+    medicineCount = 0;
+    addMedicineField();
+    setTimeout(() => {
+      successMessage.textContent = "";
+    }, 3000);
+  } catch (error) {
+    console.error("Error adding prescription: ", error);
+    alert("Failed to save prescription.");
+  }
 });

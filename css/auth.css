@@ -1,0 +1,171 @@
+/* css/auth.css */
+
+.auth-container {
+    display: flex;
+    min-height: calc(100vh - 140px); /* Full height minus header/footer */
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    background: url('https://www.transparenttextures.com/patterns/cubes.png'), var(--gradient-primary);
+    background-blend-mode: overlay;
+}
+
+.auth-card {
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    width: 100%;
+    max-width: 450px;
+    overflow: hidden;
+    animation: slide-up 0.5s ease-out forwards;
+}
+
+@keyframes slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.auth-header {
+    padding: 2rem;
+    text-align: center;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.auth-header .logo {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.auth-header p {
+    color: var(--color-gray);
+}
+
+.auth-body {
+    padding: 2.5rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--color-text);
+}
+
+.form-input-container {
+    position: relative;
+}
+
+.form-input-container .icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-gray);
+}
+
+.form-input {
+    width: 100%;
+    padding: 0.8rem 1rem 0.8rem 2.75rem; /* Add padding for the icon */
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    font-family: var(--font-primary);
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.role-selection {
+    margin-bottom: 1.5rem;
+}
+
+.role-selection fieldset {
+    border: none;
+}
+
+.role-selection legend {
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: var(--color-text);
+}
+
+.role-options {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+}
+
+.role-options label {
+    display: block;
+    padding: 1rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.role-options input[type="radio"] {
+    display: none; /* Hide the default radio button */
+}
+
+.role-options input[type="radio"]:checked + label {
+    border-color: var(--color-primary);
+    background-color: #eff6ff; /* Light blue */
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+.role-options label:hover {
+    border-color: #9ca3af;
+}
+
+.auth-btn {
+    width: 100%;
+    padding: 0.9rem;
+    font-size: 1rem;
+}
+
+.auth-footer {
+    text-align: center;
+    margin-top: 1.5rem;
+    color: var(--color-gray);
+}
+
+.auth-footer a {
+    color: var(--color-primary);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.auth-footer a:hover {
+    text-decoration: underline;
+}
+
+.error-message {
+    background-color: #fee2e2;
+    color: #b91c1c;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    text-align: center;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    display: none; /* Hidden by default */
+}
+
+.error-message.visible {
+    display: block;
+}

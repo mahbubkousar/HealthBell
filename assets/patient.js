@@ -18,28 +18,25 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
 // --- DOM Element References ---
+const loadingOverlay = document.getElementById("loading-overlay");
 const prescriptionsList = document.getElementById("prescriptions-list");
 const todaysMedsList = document.getElementById("todays-meds-list");
-const appointmentsList = document.getElementById("appointments-list"); // For appointment status
-const notificationsList = document.getElementById("notifications-list"); // For all notifications
+const appointmentsList = document.getElementById("appointments-list");
+const notificationsList = document.getElementById("notifications-list");
 const logoutButton = document.getElementById("logout-button");
 const welcomeName = document.getElementById("welcome-name");
 
-let currentUserId;
-let currentUserName;
+let currentUserId, currentUserName;
 let allPrescriptions = [];
 
 // --- AUTHENTICATION & MASTER DATA LOADING ---
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUserId = user.uid;
-    const userDocRef = doc(db, "users", currentUserId);
-    const userDoc = await getDoc(userDocRef);
-
+    const userDoc = await getDoc(doc(db, "users", currentUserId));
     if (userDoc.exists() && userDoc.data().role === "patient") {
       currentUserName = userDoc.data().name;
-      welcomeName.textContent = `Welcome, ${currentUserName}!`;
-      // This single function now loads all data for the dashboard
+      welcomeName.textContent = currentUserName;
       await loadAllPatientData(currentUserId);
     } else {
       window.location.href = "/login.html";
@@ -49,29 +46,37 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-// --- MASTER REFRESH FUNCTION ---
 async function loadAllPatientData(patientId) {
-  await Promise.all([
-    loadPrescriptionsAndLogs(patientId),
-    loadMyAppointments(patientId),
-    loadPatientNotifications(patientId),
-  ]);
+  loadingOverlay.style.display = "flex"; // Show loading spinner
+  try {
+    // Run all data-loading functions concurrently
+    await Promise.all([
+      loadPrescriptionsAndLogs(patientId),
+      loadMyAppointments(patientId),
+      loadPatientNotifications(patientId),
+    ]);
+  } catch (error) {
+    console.error(
+      "A critical error occurred while loading dashboard data:",
+      error
+    );
+    // Optionally, display a global error message on the page
+  } finally {
+    // Hide the spinner once all data is loaded (or has failed)
+    loadingOverlay.style.display = "none";
+  }
 }
 
-// --- LOGOUT LOGIC ---
+// --- LOGOUT ---
 logoutButton.addEventListener("click", () => {
   signOut(auth).then(() => {
     window.location.href = "/login.html";
   });
 });
 
-// --- PRESCRIPTION & LOGS LOADING ---
-async function loadPrescriptionsAndLogs(patientId) {
-  todaysMedsList.innerHTML =
-    '<p class="text-center text-gray-500">Loading schedule...</p>';
-  prescriptionsList.innerHTML =
-    '<p class="text-center text-gray-500">Loading prescriptions...</p>';
+// --- DATA FETCHING & RENDERING FUNCTIONS ---
 
+async function loadPrescriptionsAndLogs(patientId) {
   try {
     const presQuery = query(
       collection(db, "prescriptions"),
@@ -83,14 +88,6 @@ async function loadPrescriptionsAndLogs(patientId) {
       id: doc.id,
       ...doc.data(),
     }));
-
-    if (allPrescriptions.length === 0) {
-      todaysMedsList.innerHTML =
-        '<p class="text-center text-gray-500">No medication scheduled today.</p>';
-      prescriptionsList.innerHTML =
-        '<p class="text-center text-gray-500">You have no active prescriptions.</p>';
-      return;
-    }
 
     const todayStr = new Date().toISOString().split("T")[0];
     const logsQuery = query(
@@ -105,16 +102,17 @@ async function loadPrescriptionsAndLogs(patientId) {
     renderFullPrescriptions(allPrescriptions);
   } catch (error) {
     console.error("Error loading prescription data: ", error);
+    todaysMedsList.innerHTML =
+      '<p class="loading-placeholder text-red-500">Could not load schedule.</p>';
+    prescriptionsList.innerHTML =
+      '<p class="loading-placeholder text-red-500">Could not load prescriptions.</p>';
   }
 }
 
-// --- RENDER TODAY'S MEDICATION (GROUPED) ---
 function generateTodaysMedication(prescriptions, todaysLogs) {
-  todaysMedsList.innerHTML = "";
   const morningMeds = [],
     noonMeds = [],
     nightMeds = [];
-
   prescriptions.forEach((pres) => {
     pres.medicines.forEach((med, index) => {
       if (med.stockCount === 0 || med.remainingCount === 0) return;
@@ -122,27 +120,35 @@ function generateTodaysMedication(prescriptions, todaysLogs) {
         const hasTaken = todaysLogs.some(
           (log) => log.medicineName === med.name && log.doseTime === doseTime
         );
-        return `<div class="flex items-center justify-between p-3 bg-gray-50 rounded-md"><span class="font-semibold text-gray-800">${
-          med.name
-        }</span><label class="flex items-center cursor-pointer"><input type="checkbox" class="form-checkbox h-5 w-5 text-blue-600 take-dose-cb" ${
-          hasTaken ? "checked disabled" : ""
-        } data-prescription-id="${
-          pres.id
-        }" data-medicine-index="${index}" data-medicine-name="${
-          med.name
-        }" data-dose-time="${doseTime}"><span class="ml-2 text-sm font-medium ${
-          hasTaken ? "text-green-600" : "text-gray-700"
-        }">${hasTaken ? "Taken" : "Mark as Taken"}</span></label></div>`;
+        return `
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <span class="font-semibold text-gray-800">${
+                          med.name
+                        }</span>
+                        <div class="dose-toggle">
+                            <label class="toggle-switch">
+                                <input type="checkbox" class="take-dose-cb" 
+                                    ${hasTaken ? "checked disabled" : ""} 
+                                    data-prescription-id="${pres.id}"
+                                    data-medicine-index="${index}"
+                                    data-medicine-name="${med.name}"
+                                    data-dose-time="${doseTime}">
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label font-medium">${
+                              hasTaken ? "Taken!" : "Mark"
+                            }</span>
+                        </div>
+                    </div>`;
       };
       if (med.dose.morning) morningMeds.push(createDoseHtml("morning"));
       if (med.dose.noon) noonMeds.push(createDoseHtml("noon"));
       if (med.dose.night) nightMeds.push(createDoseHtml("night"));
     });
   });
-
   const buildSection = (title, medsArray) => {
     if (medsArray.length === 0) return "";
-    return `<div class="mb-4"><h3 class="text-lg font-bold text-gray-600 border-b pb-2 mb-3">${title}</h3><div class="space-y-2">${medsArray.join(
+    return `<div class="mb-4"><h3 class="text-base font-bold text-gray-500 uppercase tracking-wider pb-2 mb-3">${title}</h3><div class="space-y-2">${medsArray.join(
       ""
     )}</div></div>`;
   };
@@ -152,156 +158,66 @@ function generateTodaysMedication(prescriptions, todaysLogs) {
     buildSection("🌙 Night", nightMeds);
   todaysMedsList.innerHTML =
     finalHtml.trim() === ""
-      ? '<p class="text-center text-gray-500">No medication scheduled for today, or stock needs to be added.</p>'
+      ? '<p class="loading-placeholder">No medication scheduled for today.</p>'
       : finalHtml;
 }
 
-// --- RENDER FULL PRESCRIPTION CARDS ---
 function renderFullPrescriptions(prescriptions) {
-  prescriptionsList.innerHTML = "";
-  prescriptions.forEach((pres) => {
-    const card = document.createElement("div");
-    card.className = "bg-white p-6 rounded-lg shadow-md prescription-card";
-    card.dataset.id = pres.id;
-    let medicinesHtml = '<ul class="mt-2 space-y-4">';
-    pres.medicines.forEach((med, index) => {
+  if (prescriptions.length === 0) {
+    prescriptionsList.innerHTML =
+      '<p class="loading-placeholder">No active prescriptions found.</p>';
+    return;
+  }
+  prescriptionsList.innerHTML = `<div class="space-y-4">${prescriptions
+    .map((pres) => createPrescriptionCard(pres))
+    .join("")}</div>`;
+}
+
+function createPrescriptionCard(prescription) {
+  const medicinesHtml = prescription.medicines
+    .map((med, index) => {
       const doses = [];
-      if (med.dose.morning) doses.push("Morning");
-      if (med.dose.noon) doses.push("Noon");
-      if (med.dose.night) doses.push("Night");
+      if (med.dose.morning) doses.push("M");
+      if (med.dose.noon) doses.push("N");
+      if (med.dose.night) doses.push("E");
+
       let stockHtml = "";
       if (med.stockCount > 0) {
-        stockHtml = `<div class="text-sm font-semibold ${
-          med.remainingCount <= 5 ? "text-red-500" : "text-blue-600"
-        }">Stock: ${med.remainingCount} / ${med.stockCount} pills</div>`;
+        const stockLevelClass =
+          med.remainingCount <= 5 ? "text-red-600 font-bold" : "text-blue-600";
+        stockHtml = `<div class="text-sm font-semibold ${stockLevelClass}">Stock: ${med.remainingCount} / ${med.stockCount}</div>`;
       } else {
-        stockHtml = `<div class="mt-2 flex items-center gap-2"><input type="number" placeholder="How many pills bought?" min="1" class="stock-input shadow-sm border-gray-300 rounded-md p-2 text-sm w-48" data-index="${index}"><button class="save-stock-btn bg-blue-500 hover:bg-blue-700 text-white font-bold text-sm py-2 px-3 rounded" data-index="${index}">Save</button></div>`;
+        stockHtml = `<div class="mt-2 flex items-center gap-2"><input type="number" placeholder="Pills bought?" min="1" class="stock-input w-32 p-2 border rounded-md text-sm" data-index="${index}"><button class="save-stock-btn btn btn-primary py-2 px-3 text-xs" data-index="${index}">Save</button></div>`;
       }
-      medicinesHtml += `<li class="p-3 bg-gray-50 rounded-md border"><div class="flex justify-between items-center"><div><strong>${
-        med.name
-      }</strong> - for ${
+
+      return `<li class="p-3 bg-gray-50 rounded-lg border flex justify-between items-center">
+                    <div>
+                        <strong class="text-base">${
+                          med.name
+                        }</strong> <span class="text-sm text-gray-500">(${
         med.totalDays
-      } days<br><span class="text-sm text-gray-600">Dose: ${doses.join(
-        ", "
-      )}</span></div>${stockHtml}</div></li>`;
-    });
-    medicinesHtml += "</ul>";
-    card.innerHTML = `<div class="flex justify-between items-start"><div><h3 class="text-xl font-bold text-gray-800">Prescription from Dr. ${
-      pres.doctorName
-    }</h3><p class="text-sm text-gray-500">Date: ${
-      pres.startDate
-    }</p></div><span class="text-sm font-semibold py-1 px-3 rounded-full ${
-      pres.status === "active"
-        ? "bg-green-200 text-green-800"
-        : "bg-gray-200 text-gray-800"
-    }">${
-      pres.status
-    }</span></div><div class="mt-4"><h4 class="font-semibold text-gray-700">Medicines:</h4>${medicinesHtml}</div>`;
-    prescriptionsList.appendChild(card);
-  });
+      } days)</span>
+                        <div class="text-sm text-gray-500">Dose Times: ${doses.join(
+                          ", "
+                        )}</div>
+                    </div>
+                    ${stockHtml}
+                </li>`;
+    })
+    .join("");
+
+  return `
+        <div class="p-4 border rounded-lg prescription-card" data-id="${prescription.id}">
+            <div class="flex justify-between items-start mb-3">
+                <h3 class="text-lg font-bold text-gray-700">From Dr. ${prescription.doctorName}</h3>
+                <span class="text-sm text-gray-500">Prescribed: ${prescription.startDate}</span>
+            </div>
+            <ul class="space-y-3">${medicinesHtml}</ul>
+        </div>
+    `;
 }
 
-// --- GLOBAL EVENT LISTENERS FOR DYNAMIC CONTENT ---
-document.addEventListener("click", async (e) => {
-  // Listener for taking a dose
-  if (e.target.classList.contains("take-dose-cb") && e.target.checked) {
-    const checkbox = e.target;
-    checkbox.disabled = true;
-    const { prescriptionId, medicineIndex, medicineName, doseTime } =
-      checkbox.dataset;
-    await handleDoseTaken(
-      prescriptionId,
-      parseInt(medicineIndex),
-      medicineName,
-      doseTime
-    );
-  }
-  // Listener for saving stock
-  else if (e.target.classList.contains("save-stock-btn")) {
-    const button = e.target;
-    button.disabled = true;
-    button.textContent = "Saving...";
-    const card = button.closest(".prescription-card");
-    const prescriptionId = card.dataset.id;
-    const medicineIndex = button.dataset.index;
-    const input = card.querySelector(
-      `input.stock-input[data-index='${medicineIndex}']`
-    );
-    const stockValue = parseInt(input.value, 10);
-    if (stockValue > 0) {
-      await saveStockCount(prescriptionId, medicineIndex, stockValue);
-      await loadAllPatientData(currentUserId);
-    } else {
-      alert("Please enter a valid stock number.");
-      button.disabled = false;
-      button.textContent = "Save";
-    }
-  }
-});
-
-// --- HANDLE DOSE TAKEN & NOTIFICATION LOGIC ---
-async function handleDoseTaken(prescriptionId, medIndex, medName, doseTime) {
-  const prescription = allPrescriptions.find((p) => p.id === prescriptionId);
-  if (!prescription) return;
-
-  const medicine = prescription.medicines[medIndex];
-  const newRemainingCount = medicine.remainingCount - 1;
-
-  const batch = writeBatch(db);
-  const logRef = doc(collection(db, "medicationLog"));
-  batch.set(logRef, {
-    patientId: currentUserId,
-    prescriptionId: prescriptionId,
-    medicineName: medName,
-    doseTime: doseTime,
-    dateTaken: new Dtate().toISOString().split("T")[0],
-    timestamp: new Date(),
-  });
-
-  const presDocRef = doc(db, "prescriptions", prescriptionId);
-  const updatedMedicines = [...prescription.medicines];
-  updatedMedicines[medIndex].remainingCount = newRemainingCount;
-  batch.update(presDocRef, { medicines: updatedMedicines });
-
-  try {
-    await batch.commit();
-    console.log("Dose logged and stock updated successfully.");
-
-    // Create low stock notification for the patient when stock hits 5
-    if (newRemainingCount === 5) {
-      await createPatientNotification(
-        "low_stock",
-        `Your stock for ${medName} is running low. Contact your pharmacy.`
-      );
-    }
-    await loadAllPatientData(currentUserId);
-  } catch (error) {
-    console.error("Failed to log dose: ", error);
-    alert(
-      "There was an error saving your action. Please refresh and try again."
-    );
-  }
-}
-
-// --- SAVE STOCK COUNT ---
-async function saveStockCount(prescriptionId, medicineIndex, stockValue) {
-  const presDocRef = doc(db, "prescriptions", prescriptionId);
-  try {
-    const presDoc = await getDoc(presDocRef);
-    if (!presDoc.exists()) throw new Error("Doc not found");
-    const updatedMedicines = [...presDoc.data().medicines];
-    updatedMedicines[medicineIndex].stockCount = stockValue;
-    updatedMedicines[medicineIndex].remainingCount = stockValue;
-    await updateDoc(presDocRef, { medicines: updatedMedicines });
-  } catch (error) {
-    console.error("Error updating stock count: ", error);
-  }
-}
-
-// --- APPOINTMENT VIEWING ---
 async function loadMyAppointments(patientId) {
-  appointmentsList.innerHTML =
-    '<p class="text-center text-gray-500">Loading appointments...</p>';
   try {
     const q = query(
       collection(db, "appointments"),
@@ -311,56 +227,38 @@ async function loadMyAppointments(patientId) {
     const querySnapshot = await getDocs(q);
     if (querySnapshot.empty) {
       appointmentsList.innerHTML =
-        '<p class="text-center text-gray-500">You have not booked any appointments.</p>';
+        '<p class="loading-placeholder">No appointments booked.</p>';
       return;
     }
-    appointmentsList.innerHTML = "";
-    querySnapshot.forEach((doc) => {
-      const appointment = doc.data();
-      const appointmentCard = createAppointmentCard(appointment);
-      appointmentsList.appendChild(appointmentCard);
-    });
+    appointmentsList.innerHTML = querySnapshot.docs
+      .map((doc) => {
+        const appointment = doc.data();
+        const statusClass = `status-${appointment.status}`;
+        return `
+                <div class="appointment-item">
+                    <div class="flex-1">
+                        <p class="font-semibold text-gray-800">${
+                          appointment.doctorName
+                        }</p>
+                        <p class="text-sm text-gray-600">${new Date(
+                          appointment.slotDateTime
+                        ).toLocaleString()}</p>
+                    </div>
+                    <span class="status-badge ${statusClass}">${
+          appointment.status
+        }</span>
+                </div>
+            `;
+      })
+      .join("");
   } catch (error) {
-    console.error("Error loading appointments: ", error);
-  }
-}
-
-function createAppointmentCard(appointment) {
-  const card = document.createElement("div");
-  let statusClass = "bg-yellow-100 text-yellow-800";
-  if (appointment.status === "confirmed")
-    statusClass = "bg-green-100 text-green-800";
-  if (appointment.status === "rejected")
-    statusClass = "bg-red-100 text-red-800";
-  card.className = "p-4 rounded-lg flex justify-between items-center border";
-  card.innerHTML = `<div><p class="font-bold text-gray-800">Appointment with ${
-    appointment.doctorName
-  }</p><p class="text-sm text-gray-600">${new Date(
-    appointment.slotDateTime
-  ).toLocaleString()}</p></div><span class="text-sm font-semibold py-1 px-3 rounded-full ${statusClass}">${
-    appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)
-  }</span>`;
-  return card;
-}
-
-// --- PATIENT NOTIFICATION SYSTEM ---
-async function createPatientNotification(type, message) {
-  try {
-    await addDoc(collection(db, "notifications"), {
-      type: type,
-      targetUserId: currentUserId,
-      message: message,
-      isRead: false,
-      createdAt: serverTimestamp(),
-    });
-  } catch (error) {
-    console.error("Error creating patient notification: ", error);
+    console.error("Error loading appointments:", error);
+    appointmentsList.innerHTML =
+      '<p class="loading-placeholder text-red-500">Could not load appointments.</p>';
   }
 }
 
 async function loadPatientNotifications(patientId) {
-  notificationsList.innerHTML =
-    '<p class="text-center text-gray-500">Loading...</p>';
   try {
     const q = query(
       collection(db, "notifications"),
@@ -370,37 +268,141 @@ async function loadPatientNotifications(patientId) {
     const querySnapshot = await getDocs(q);
     if (querySnapshot.empty) {
       notificationsList.innerHTML =
-        '<p class="text-center text-gray-500">No new notifications.</p>';
+        '<p class="loading-placeholder">You have no notifications.</p>';
       return;
     }
-    notificationsList.innerHTML = "";
-    querySnapshot.forEach((doc) => {
-      const notification = doc.data();
-      const notificationCard = createPatientNotificationCard(notification);
-      notificationsList.appendChild(notificationCard);
-    });
+    notificationsList.innerHTML = querySnapshot.docs
+      .map((doc) => {
+        const notification = doc.data();
+        let icon, iconClass;
+        switch (notification.type) {
+          case "low_stock":
+            icon = "fa-pills";
+            iconClass = "text-red-500";
+            break;
+          case "pharmacy_offer":
+            icon = "fa-tags";
+            iconClass = "text-green-500";
+            break;
+          default:
+            icon = "fa-bell";
+            iconClass = "text-blue-500";
+        }
+        return `
+                <div class="notification-item">
+                    <i class="icon fa-solid ${icon} ${iconClass}"></i>
+                    <p class="message flex-1">${notification.message}</p>
+                    <span class="timestamp">${notification.createdAt
+                      ?.toDate()
+                      .toLocaleDateString()}</span>
+                </div>`;
+      })
+      .join("");
   } catch (error) {
     console.error("Error loading notifications:", error);
+    notificationsList.innerHTML =
+      '<p class="loading-placeholder text-red-500">Could not load notifications.</p>';
   }
 }
 
-function createPatientNotificationCard(notification) {
-  const card = document.createElement("div");
-  let icon = "🔔"; // Default
-  if (notification.type === "low_stock") icon = "💊";
-  if (notification.type === "pharmacy_offer") icon = "💰";
-  if (notification.type === "appointment_confirmed") icon = "✅";
-  if (notification.type === "appointment_rejected") icon = "❌";
+// --- EVENT HANDLERS & DATA MODIFICATION ---
+document.addEventListener("click", async (e) => {
+  const doseCheckbox = e.target.closest(".take-dose-cb");
+  const saveStockBtn = e.target.closest(".save-stock-btn");
 
-  card.className = "p-3 flex items-start gap-3 border-b";
-  card.innerHTML = `
-        <span class="text-xl mt-1">${icon}</span>
-        <div>
-            <p class="text-sm text-gray-800">${notification.message}</p>
-            <p class="text-xs text-gray-500">${notification.createdAt
-              ?.toDate()
-              .toLocaleDateString()}</p>
-        </div>
-    `;
-  return card;
+  if (doseCheckbox && doseCheckbox.checked) {
+    doseCheckbox.disabled = true;
+    const { prescriptionId, medicineIndex, medicineName, doseTime } =
+      doseCheckbox.dataset;
+    await handleDoseTaken(
+      prescriptionId,
+      parseInt(medicineIndex),
+      medicineName,
+      doseTime
+    );
+  } else if (saveStockBtn) {
+    saveStockBtn.disabled = true;
+    saveStockBtn.textContent = "...";
+    const card = saveStockBtn.closest(".prescription-card");
+    const prescriptionId = card.dataset.id;
+    const medicineIndex = saveStockBtn.dataset.index;
+    const input = card.querySelector(
+      `input.stock-input[data-index='${medicineIndex}']`
+    );
+    const stockValue = parseInt(input.value, 10);
+    if (stockValue > 0) {
+      await saveStockCount(prescriptionId, medicineIndex, stockValue);
+    } else {
+      alert("Please enter a valid stock number.");
+      saveStockBtn.disabled = false;
+      saveStockBtn.textContent = "Save";
+    }
+  }
+});
+
+async function handleDoseTaken(prescriptionId, medIndex, medName, doseTime) {
+  const prescription = allPrescriptions.find((p) => p.id === prescriptionId);
+  if (!prescription) return;
+
+  const newRemainingCount = prescription.medicines[medIndex].remainingCount - 1;
+  const batch = writeBatch(db);
+
+  batch.set(doc(collection(db, "medicationLog")), {
+    patientId: currentUserId,
+    prescriptionId,
+    medicineName: medName,
+    doseTime,
+    dateTaken: new Date().toISOString().split("T")[0],
+    timestamp: new Date(),
+  });
+
+  const updatedMedicines = [...prescription.medicines];
+  updatedMedicines[medIndex].remainingCount = newRemainingCount;
+  batch.update(doc(db, "prescriptions", prescriptionId), {
+    medicines: updatedMedicines,
+  });
+
+  try {
+    await batch.commit();
+    if (newRemainingCount === 5) {
+      await createPatientNotification(
+        "low_stock",
+        `Your stock for ${medName} is running low. Contact your pharmacy.`
+      );
+    }
+    await loadAllPatientData(currentUserId);
+  } catch (error) {
+    console.error("Failed to log dose: ", error);
+  }
+}
+
+async function saveStockCount(prescriptionId, medicineIndex, stockValue) {
+  try {
+    const presDocRef = doc(db, "prescriptions", prescriptionId);
+    const presDoc = await getDoc(presDocRef);
+    if (!presDoc.exists()) throw new Error("Prescription not found");
+
+    const updatedMedicines = [...presDoc.data().medicines];
+    updatedMedicines[medicineIndex].stockCount = stockValue;
+    updatedMedicines[medicineIndex].remainingCount = stockValue;
+
+    await updateDoc(presDocRef, { medicines: updatedMedicines });
+    await loadAllPatientData(currentUserId);
+  } catch (error) {
+    console.error("Error updating stock count: ", error);
+  }
+}
+
+async function createPatientNotification(type, message) {
+  try {
+    await addDoc(collection(db, "notifications"), {
+      type,
+      message,
+      targetUserId: currentUserId,
+      isRead: false,
+      createdAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error("Error creating patient notification: ", error);
+  }
 }

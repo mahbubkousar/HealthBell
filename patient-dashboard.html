@@ -4,121 +4,113 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Patient Dashboard - HealthBell</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css"
+    />
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/dashboard.css" />
+    <!-- Dashboard-specific styles -->
   </head>
   <body class="bg-gray-100">
-    <!-- Navbar -->
-    <nav class="bg-white shadow-md">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16">
-          <div class="flex-shrink-0 flex items-center">
-            <h1 class="text-xl font-bold text-blue-600">
-              HealthBell - Patient Portal
-            </h1>
-          </div>
-          <div class="flex items-center">
-            <span
-              id="welcome-name"
-              class="mr-4 font-semibold text-gray-700"
-            ></span>
-            <a
-              href="/book-appointment.html"
-              class="mr-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded"
-            >
-              Book Appointment
-            </a>
-            <button
-              id="logout-button"
-              class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
+    <!-- Header -->
+    <header class="main-header">
+      <div class="container">
+        <a href="/index.html" class="logo">HealthBell</a>
+        <nav class="main-nav">
+          <ul>
+            <li>
+              <a href="/patient-dashboard.html" class="active">Dashboard</a>
+            </li>
+            <li><a href="/book-appointment.html">Book Appointment</a></li>
+            <li>
+              <button id="logout-button" class="text-red-500 font-semibold">
+                Logout
+              </button>
+            </li>
+          </ul>
+        </nav>
+        <div class="hamburger"><i class="fa-solid fa-bars"></i></div>
       </div>
-    </nav>
+    </header>
 
-    <!-- Main Content -->
-    <!-- In patient-dashboard.html, replace the <main> element -->
-    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-      <!-- Daily Tracker Section -->
-      <div class="px-4 py-6 sm:px-0">
-        <div class="bg-white p-8 rounded-lg shadow-md mb-6">
-          <h2 class="text-2xl font-bold mb-4 text-gray-800">
-            Today's Medication
-          </h2>
-          <div id="todays-meds-list" class="space-y-3">
-            <p class="text-center text-gray-500">Loading today's schedule...</p>
+    <!-- This overlay will show a loading spinner for the whole page -->
+    <div
+      id="loading-overlay"
+      class="fixed inset-0 bg-white bg-opacity-75 z-50 flex items-center justify-center"
+    >
+      <i class="fas fa-spinner fa-spin text-blue-500 text-4xl"></i>
+    </div>
+
+    <main class="dashboard-main container">
+      <h1 class="text-3xl font-bold mb-2">
+        Welcome, <span id="welcome-name">...</span>!
+      </h1>
+      <p class="text-gray-500 mb-8">Here's your health summary for today.</p>
+
+      <div class="dashboard-grid">
+        <!-- Today's Medication Card -->
+        <div class="card lg:col-span-2">
+          <div class="card-header">
+            <i class="fa-solid fa-calendar-day"></i>
+            <h2 class="card-title">Today's Medication</h2>
+          </div>
+          <div id="todays-meds-list" class="card-content">
+            <p class="loading-placeholder">Loading today's schedule...</p>
           </div>
         </div>
-      </div>
 
-      <!-- Two-column layout for Appointments and Notifications -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 px-4 sm:px-0">
-        <!-- My Appointments Section -->
-        <div class="bg-white p-8 rounded-lg shadow-md">
-          <h2 class="text-2xl font-bold mb-4 text-gray-800">My Appointments</h2>
-          <div id="appointments-list" class="space-y-3">
-            <p class="text-center text-gray-500">
-              Loading your appointments...
-            </p>
+        <!-- Appointments Card -->
+        <div class="card">
+          <div class="card-header">
+            <i class="fa-solid fa-calendar-check"></i>
+            <h2 class="card-title">My Appointments</h2>
+          </div>
+          <div id="appointments-list" class="card-content appointment-list">
+            <p class="loading-placeholder">Loading appointments...</p>
           </div>
         </div>
-        <!-- NEW: Notifications Section -->
-        <div class="bg-white p-8 rounded-lg shadow-md">
-          <h2 class="text-2xl font-bold mb-4 text-gray-800">Notifications</h2>
-          <div
-            id="notifications-list"
-            class="space-y-3 max-h-96 overflow-y-auto"
-          >
-            <p class="text-center text-gray-500">Loading notifications...</p>
+
+        <!-- Notifications Card -->
+        <div class="card">
+          <div class="card-header">
+            <i class="fa-solid fa-bell"></i>
+            <h2 class="card-title">Notifications</h2>
+          </div>
+          <div id="notifications-list" class="card-content notification-list">
+            <p class="loading-placeholder">Loading notifications...</p>
           </div>
         </div>
-      </div>
 
-      <!-- Full Prescriptions Section (remains below) -->
-      <div class="px-4 py-6 sm:px-0 mt-6">
-        <h2 class="text-2xl font-bold mb-4 text-gray-800">
-          My Full Prescriptions
-        </h2>
-        <div id="prescriptions-list" class="space-y-4">
-          <p class="text-center text-gray-500">Loading your prescriptions...</p>
+        <!-- Full Prescriptions Card -->
+        <div class="card lg:col-span-2">
+          <div class="card-header">
+            <i class="fa-solid fa-file-prescription"></i>
+            <h2 class="card-title">My Full Prescriptions</h2>
+          </div>
+          <div id="prescriptions-list" class="card-content">
+            <p class="loading-placeholder">Loading prescriptions...</p>
+          </div>
         </div>
       </div>
     </main>
 
-    <!-- HTML TEMPLATE for the dashboard sections (kept hidden) -->
-    <template id="dashboard-template">
-      <!-- Daily Tracker Section -->
-      <div class="px-4 py-6 sm:px-0">
-        <div class="bg-white p-8 rounded-lg shadow-md mb-6">
-          <h2 class="text-2xl font-bold mb-4 text-gray-800">
-            Today's Medication
-          </h2>
-          <div id="todays-meds-list" class="space-y-3"></div>
-        </div>
+    <!-- Footer -->
+    <footer class="main-footer">
+      <div class="container">
+        <p>© 2024 HealthBell. All Rights Reserved.</p>
       </div>
+    </footer>
 
-      <!-- Appointments Section -->
-      <div class="px-4 py-6 sm:px-0">
-        <div class="bg-white p-8 rounded-lg shadow-md mb-6">
-          <h2 class="text-2xl font-bold mb-4 text-gray-800">My Appointments</h2>
-          <div id="appointments-list" class="space-y-3"></div>
-        </div>
-      </div>
-
-      <!-- Full Prescriptions Section -->
-      <div class="px-4 py-6 sm:px-0">
-        <div class="bg-white p-8 rounded-lg shadow-md">
-          <h2 class="text-2xl font-bold mb-4 text-gray-800">
-            My Full Prescriptions
-          </h2>
-          <div id="prescriptions-list" class="space-y-4"></div>
-        </div>
-      </div>
-    </template>
-
-    <!-- Firebase SDKs -->
+    <!-- Scripts -->
+    <script src="assets/main.js"></script>
     <script
       src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"
       type="module"
@@ -131,8 +123,6 @@
       src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"
       type="module"
     ></script>
-
-    <!-- Our Project Scripts -->
     <script src="firebase-config.js" type="module"></script>
     <script src="assets/patient.js" type="module"></script>
   </body>

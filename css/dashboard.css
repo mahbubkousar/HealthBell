@@ -1,0 +1,171 @@
+/* css/dashboard.css */
+
+/* 1. DASHBOARD LAYOUT & GENERAL STYLES */
+.dashboard-main {
+    padding: 2rem 1.5rem;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+    .dashboard-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: var(--shadow-md);
+    padding: 1.5rem;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.card-header i {
+    font-size: 1.25rem;
+    color: var(--color-primary);
+}
+
+.card-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-dark);
+}
+
+.card-content {
+    font-size: 0.95rem;
+}
+
+.loading-placeholder {
+    text-align: center;
+    color: var(--color-gray);
+    padding: 2rem;
+}
+
+/* 2. CUSTOM TOGGLE SWITCH FOR DOSE TRACKING */
+.dose-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.dose-toggle .toggle-label {
+    font-weight: 500;
+    color: var(--color-text);
+    transition: color 0.3s ease;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 28px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 28px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+    background-color: var(--color-secondary);
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(22px);
+}
+
+input:disabled + .toggle-slider {
+    cursor: not-allowed;
+    background-color: #14b8a6; /* Keep green when disabled */
+    opacity: 0.7;
+}
+
+input:checked ~ .toggle-label {
+    color: var(--color-secondary);
+}
+
+/* 3. NOTIFICATION & APPOINTMENT LIST STYLES */
+.notification-list, .appointment-list {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 0.5rem; /* For scrollbar */
+}
+
+.notification-item, .appointment-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f3f4f6;
+}
+.notification-item:last-child, .appointment-item:last-child {
+    border-bottom: none;
+}
+.notification-item .icon {
+    font-size: 1.25rem;
+    width: 30px;
+    text-align: center;
+}
+.notification-item .message {
+    flex: 1;
+    font-size: 0.9rem;
+}
+.notification-item .timestamp {
+    font-size: 0.8rem;
+    color: var(--color-gray);
+}
+
+.status-badge {
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.25rem 0.75rem;
+    border-radius: 50px;
+    white-space: nowrap;
+}
+.status-confirmed { background-color: #d1fae5; color: #065f46; }
+.status-pending { background-color: #fef3c7; color: #92400e; }
+.status-rejected { background-color: #fee2e2; color: #991b1b; }

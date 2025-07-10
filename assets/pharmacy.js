@@ -16,19 +16,20 @@ import {
   serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
+// --- DOM Element References ---
+const loadingOverlay = document.getElementById("loading-overlay");
 const notificationsList = document.getElementById("notifications-list");
 const logoutButton = document.getElementById("logout-button");
-let pharmacyName; // Store pharmacy name for notifications
 
-// --- AUTHENTICATION & DATA LOADING ---
+let pharmacyName;
+
+// --- AUTHENTICATION & MASTER DATA LOADING ---
 onAuthStateChanged(auth, async (user) => {
   if (user) {
-    const userDocRef = doc(db, "users", user.uid);
-    const userDoc = await getDoc(userDocRef);
-
+    const userDoc = await getDoc(doc(db, "users", user.uid));
     if (userDoc.exists() && userDoc.data().role === "pharmacy") {
-      pharmacyName = userDoc.data().name; // Get pharmacy name
-      loadNotifications();
+      pharmacyName = userDoc.data().name;
+      await loadAllPharmacyData();
     } else {
       window.location.href = "/login.html";
     }
@@ -37,15 +38,24 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-// --- LOGOUT LOGIC ---
+async function loadAllPharmacyData() {
+  loadingOverlay.style.display = "flex";
+  try {
+    await loadNotifications();
+  } catch (error) {
+    console.error("Error loading pharmacy data:", error);
+  } finally {
+    loadingOverlay.style.display = "none";
+  }
+}
+
+// --- LOGOUT ---
 logoutButton.addEventListener("click", () => {
   signOut(auth).then(() => (window.location.href = "/login.html"));
 });
 
-// --- LOAD NOTIFICATIONS (MODIFIED) ---
+// --- LOAD & RENDER NOTIFICATIONS (REDESIGNED) ---
 async function loadNotifications() {
-  notificationsList.innerHTML =
-    '<p class="text-center text-gray-500">Loading notifications...</p>';
   try {
     const q = query(
       collection(db, "notifications"),
@@ -57,98 +67,90 @@ async function loadNotifications() {
 
     if (querySnapshot.empty) {
       notificationsList.innerHTML =
-        '<p class="text-center text-gray-500">No new notifications.</p>';
+        '<p class="loading-placeholder">No new alerts.</p>';
       return;
     }
 
-    notificationsList.innerHTML = "";
-    querySnapshot.forEach((doc) => {
-      // Pass the document ID to the creation function
-      const notificationCard = createNotificationCard(doc.id, doc.data());
-      notificationsList.appendChild(notificationCard);
-    });
+    notificationsList.innerHTML = querySnapshot.docs
+      .map((doc) => {
+        const notification = doc.data();
+        const timestamp =
+          notification.createdAt?.toDate().toLocaleDateString() || "Just now";
+        return `
+                <div class="p-4 border rounded-lg bg-yellow-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div>
+                        <p class="font-semibold text-gray-800">${notification.message}</p>
+                        <p class="text-sm text-gray-500">Received: ${timestamp}</p>
+                    </div>
+                    <div class="flex gap-2 flex-shrink-0">
+                        <button class="send-offer-btn btn btn-primary text-xs py-1 px-3"
+                                data-doc-id="${doc.id}"
+                                data-patient-id="${notification.patientId}"
+                                data-medicine-name="${notification.medicineName}">
+                            <i class="fa-solid fa-paper-plane mr-1"></i> Send Offer
+                        </button>
+                        <button class="mark-read-btn btn bg-gray-200 hover:bg-gray-300 text-gray-800 text-xs py-1 px-3"
+                                data-doc-id="${doc.id}">
+                            Dismiss
+                        </button>
+                    </div>
+                </div>
+            `;
+      })
+      .join("");
   } catch (error) {
     console.error("Error loading notifications: ", error);
+    notificationsList.innerHTML =
+      '<p class="loading-placeholder text-red-500">Could not load alerts.</p>';
   }
 }
 
-// --- CREATE NOTIFICATION CARD (MODIFIED) ---
-function createNotificationCard(docId, notification) {
-  const card = document.createElement("div");
-  card.className =
-    "bg-white p-4 rounded-lg shadow flex justify-between items-center";
-  const timestamp =
-    notification.createdAt?.toDate().toLocaleString() || "Just now";
-
-  card.innerHTML = `
-        <div>
-            <p class="font-semibold text-gray-800">${notification.message}</p>
-            <p class="text-sm text-gray-500">Received: ${timestamp}</p>
-        </div>
-        <div class="flex gap-2">
-            <button class="send-offer-btn bg-blue-500 hover:bg-blue-600 text-white text-sm font-bold py-1 px-3 rounded"
-                    data-doc-id="${docId}"
-                    data-patient-id="${notification.patientId}"
-                    data-medicine-name="${notification.medicineName}">
-                Send Offer
-            </button>
-            <button class="mark-read-btn bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-bold py-1 px-3 rounded"
-                    data-doc-id="${docId}">
-                Dismiss
-            </button>
-        </div>
-    `;
-  return card;
-}
-
-// --- EVENT LISTENER FOR BUTTONS ---
+// --- EVENT LISTENERS & ACTIONS ---
 notificationsList.addEventListener("click", async (e) => {
-  const button = e.target;
+  const button = e.target.closest(".send-offer-btn, .mark-read-btn");
+  if (!button) return;
+
+  button.disabled = true;
   const docId = button.dataset.docId;
-  if (!docId) return;
 
   if (button.classList.contains("send-offer-btn")) {
     const { patientId, medicineName } = button.dataset;
     const offerMessage = prompt(
-      `Enter your offer for ${medicineName} (e.g., '20% off your next refill!'):`
+      `Enter your offer for ${medicineName} for patient (e.g., '15% off your next refill!'):`
     );
 
-    if (offerMessage) {
-      button.disabled = true;
-      button.textContent = "Sending...";
+    if (offerMessage && offerMessage.trim() !== "") {
       await sendOfferToPatient(patientId, medicineName, offerMessage);
       await markNotificationAsRead(docId);
-      loadNotifications(); // Refresh the list
+      await loadAllPharmacyData(); // Refresh the list
+    } else {
+      button.disabled = false; // Re-enable if prompt is cancelled
     }
   } else if (button.classList.contains("mark-read-btn")) {
-    button.disabled = true;
     await markNotificationAsRead(docId);
-    loadNotifications(); // Refresh the list
+    await loadAllPharmacyData(); // Refresh the list
   }
 });
 
-// --- NEW FUNCTION TO SEND OFFER ---
 async function sendOfferToPatient(patientId, medicineName, offerMessage) {
   try {
     await addDoc(collection(db, "notifications"), {
       type: "pharmacy_offer",
-      targetUserId: patientId, // Target a specific patient
+      targetUserId: patientId,
       message: `Offer from ${pharmacyName} for ${medicineName}: ${offerMessage}`,
       isRead: false,
       createdAt: serverTimestamp(),
     });
-    alert("Offer sent successfully!");
+    // We can remove the alert for a smoother experience
   } catch (error) {
     console.error("Error sending offer: ", error);
-    alert("Failed to send offer.");
+    alert("Failed to send offer."); // Keep alert for failures
   }
 }
 
-// --- NEW FUNCTION TO MARK AS READ ---
 async function markNotificationAsRead(docId) {
   try {
-    const docRef = doc(db, "notifications", docId);
-    await updateDoc(docRef, { isRead: true });
+    await updateDoc(doc(db, "notifications", docId), { isRead: true });
   } catch (error) {
     console.error("Error marking notification as read: ", error);
   }

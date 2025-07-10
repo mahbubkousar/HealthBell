@@ -97,7 +97,7 @@ body {
 
 /* New: Active link styling */
 .main-nav a.active {
-    color: var(--color-primary);
+    color: var(--color-text);
     font-weight: 600;
 }
 
