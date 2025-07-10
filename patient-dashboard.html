@@ -1,74 +1,139 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Patient Dashboard - HealthBell</title>
     <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100">
-
+  </head>
+  <body class="bg-gray-100">
     <!-- Navbar -->
     <nav class="bg-white shadow-md">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex-shrink-0 flex items-center">
-                    <h1 class="text-xl font-bold text-blue-600">HealthBell - Patient Portal</h1>
-                </div>
-                <div class="flex items-center">
-                    <span id="welcome-name" class="mr-4 font-semibold text-gray-700"></span>
-                    <a href="/book-appointment.html" class="mr-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded">
-                        Book Appointment
-                    </a>
-                    <button id="logout-button" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
-                        Logout
-                    </button>
-                </div>
-            </div>
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+          <div class="flex-shrink-0 flex items-center">
+            <h1 class="text-xl font-bold text-blue-600">
+              HealthBell - Patient Portal
+            </h1>
+          </div>
+          <div class="flex items-center">
+            <span
+              id="welcome-name"
+              class="mr-4 font-semibold text-gray-700"
+            ></span>
+            <a
+              href="/book-appointment.html"
+              class="mr-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded"
+            >
+              Book Appointment
+            </a>
+            <button
+              id="logout-button"
+              class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+            >
+              Logout
+            </button>
+          </div>
         </div>
+      </div>
     </nav>
 
     <!-- Main Content -->
-    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8" id="dashboard-content">
-        <!-- The content below will be populated by JavaScript -->
-        <p class="text-center text-gray-500 text-lg">Loading Dashboard...</p>
+    <!-- In patient-dashboard.html, replace the <main> element -->
+    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+      <!-- Daily Tracker Section -->
+      <div class="px-4 py-6 sm:px-0">
+        <div class="bg-white p-8 rounded-lg shadow-md mb-6">
+          <h2 class="text-2xl font-bold mb-4 text-gray-800">
+            Today's Medication
+          </h2>
+          <div id="todays-meds-list" class="space-y-3">
+            <p class="text-center text-gray-500">Loading today's schedule...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Two-column layout for Appointments and Notifications -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 px-4 sm:px-0">
+        <!-- My Appointments Section -->
+        <div class="bg-white p-8 rounded-lg shadow-md">
+          <h2 class="text-2xl font-bold mb-4 text-gray-800">My Appointments</h2>
+          <div id="appointments-list" class="space-y-3">
+            <p class="text-center text-gray-500">
+              Loading your appointments...
+            </p>
+          </div>
+        </div>
+        <!-- NEW: Notifications Section -->
+        <div class="bg-white p-8 rounded-lg shadow-md">
+          <h2 class="text-2xl font-bold mb-4 text-gray-800">Notifications</h2>
+          <div
+            id="notifications-list"
+            class="space-y-3 max-h-96 overflow-y-auto"
+          >
+            <p class="text-center text-gray-500">Loading notifications...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Full Prescriptions Section (remains below) -->
+      <div class="px-4 py-6 sm:px-0 mt-6">
+        <h2 class="text-2xl font-bold mb-4 text-gray-800">
+          My Full Prescriptions
+        </h2>
+        <div id="prescriptions-list" class="space-y-4">
+          <p class="text-center text-gray-500">Loading your prescriptions...</p>
+        </div>
+      </div>
     </main>
 
     <!-- HTML TEMPLATE for the dashboard sections (kept hidden) -->
     <template id="dashboard-template">
-        <!-- Daily Tracker Section -->
-        <div class="px-4 py-6 sm:px-0">
-            <div class="bg-white p-8 rounded-lg shadow-md mb-6">
-                <h2 class="text-2xl font-bold mb-4 text-gray-800">Today's Medication</h2>
-                <div id="todays-meds-list" class="space-y-3"></div>
-            </div>
+      <!-- Daily Tracker Section -->
+      <div class="px-4 py-6 sm:px-0">
+        <div class="bg-white p-8 rounded-lg shadow-md mb-6">
+          <h2 class="text-2xl font-bold mb-4 text-gray-800">
+            Today's Medication
+          </h2>
+          <div id="todays-meds-list" class="space-y-3"></div>
         </div>
+      </div>
 
-        <!-- Appointments Section -->
-        <div class="px-4 py-6 sm:px-0">
-            <div class="bg-white p-8 rounded-lg shadow-md mb-6">
-                <h2 class="text-2xl font-bold mb-4 text-gray-800">My Appointments</h2>
-                <div id="appointments-list" class="space-y-3"></div>
-            </div>
+      <!-- Appointments Section -->
+      <div class="px-4 py-6 sm:px-0">
+        <div class="bg-white p-8 rounded-lg shadow-md mb-6">
+          <h2 class="text-2xl font-bold mb-4 text-gray-800">My Appointments</h2>
+          <div id="appointments-list" class="space-y-3"></div>
         </div>
+      </div>
 
-        <!-- Full Prescriptions Section -->
-        <div class="px-4 py-6 sm:px-0">
-            <div class="bg-white p-8 rounded-lg shadow-md">
-                <h2 class="text-2xl font-bold mb-4 text-gray-800">My Full Prescriptions</h2>
-                <div id="prescriptions-list" class="space-y-4"></div>
-            </div>
+      <!-- Full Prescriptions Section -->
+      <div class="px-4 py-6 sm:px-0">
+        <div class="bg-white p-8 rounded-lg shadow-md">
+          <h2 class="text-2xl font-bold mb-4 text-gray-800">
+            My Full Prescriptions
+          </h2>
+          <div id="prescriptions-list" class="space-y-4"></div>
         </div>
+      </div>
     </template>
 
-
     <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js" type="module"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js" type="module"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js" type="module"></script>
-    
+    <script
+      src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"
+      type="module"
+    ></script>
+    <script
+      src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"
+      type="module"
+    ></script>
+    <script
+      src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"
+      type="module"
+    ></script>
+
     <!-- Our Project Scripts -->
     <script src="firebase-config.js" type="module"></script>
     <script src="assets/patient.js" type="module"></script>
-</body>
+  </body>
 </html>
