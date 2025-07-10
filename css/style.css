@@ -1,0 +1,212 @@
+/* css/style.css */
+
+/* 1. FONT & COLOR DEFINITIONS */
+:root {
+    --font-primary: 'Poppins', sans-serif;
+    --color-primary: #3b82f6; /* Blue 500 */
+    --color-secondary: #14b8a6; /* Teal 500 */
+    --color-dark: #1f2937; /* Gray 800 */
+    --color-light: #f9fafb; /* Gray 50 */
+    --color-text: #374151; /* Gray 700 */
+    --color-gray: #9ca3af; /* Gray 400 */
+    --gradient-primary: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+/* 2. GLOBAL STYLES & RESETS */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-primary);
+    background-color: var(--color-light);
+    color: var(--color-text);
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+}
+
+/* 3. HEADER & FOOTER */
+.main-header {
+    background: #fff;
+    /* New: subtle border for clean separation */
+    border-bottom: 1px solid #e5e7eb; 
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    transition: box-shadow 0.3s ease;
+}
+
+.main-header .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 70px;
+}
+
+.logo {
+    font-size: 1.75rem; /* Slightly larger */
+    font-weight: 700;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    padding: 0.5rem 0; /* Ensures consistent height */
+}
+
+.main-nav ul {
+    display: flex;
+    list-style: none;
+    align-items: center; /* Vertically align items */
+    gap: 1.75rem; /* A bit more space */
+}
+
+.main-nav a {
+    text-decoration: none;
+    color: var(--color-text);
+    font-weight: 500;
+    padding: 0.5rem 0.5rem;
+    position: relative; /* For the underline effect */
+    transition: color 0.3s ease;
+}
+
+/* New: Underline effect on hover */
+.main-nav a:not(.btn)::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: var(--gradient-primary);
+    transition: width 0.3s ease;
+}
+
+.main-nav a:not(.btn):hover::after {
+    width: 100%;
+}
+
+/* New: Active link styling */
+.main-nav a.active {
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+.btn {
+    display: inline-block;
+    padding: 0.6rem 1.4rem; /* Adjusted padding */
+    border-radius: 8px; /* Slightly less rounded */
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-primary {
+    background: var(--gradient-primary);
+    color: #fff;
+    box-shadow: 0 4px 15px -5px rgba(59, 130, 246, 0.6);
+}
+
+.btn-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px -5px rgba(59, 130, 246, 0.8);
+}
+
+.hamburger {
+    display: none;
+    cursor: pointer;
+    font-size: 1.5rem;
+    z-index: 1001; /* Ensure it's above other elements */
+    color: var(--color-dark);
+}
+
+.main-footer {
+    background: var(--color-dark);
+    color: #e5e7eb; /* Lighter text for footer */
+    text-align: center;
+    padding: 2.5rem 0; /* More padding */
+    margin-top: 4rem;
+}
+
+
+/* 4. FADE-IN ANIMATION */
+.fade-in {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.fade-in.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* 5. RESPONSIVE DESIGN FOR NAV */
+@media (max-width: 768px) {
+    .main-nav {
+        position: fixed; /* Changed to fixed for better overlay behavior */
+        top: 0;
+        right: -100%; /* Start off-screen */
+        width: 80%;
+        max-width: 300px;
+        height: 100vh;
+        background: #fff;
+        box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+        padding-top: 100px; /* Space for logo and close button */
+        transition: right 0.4s cubic-bezier(0.23, 1, 0.32, 1); /* Smoother animation */
+    }
+
+    .main-nav.active {
+        right: 0; /* Slide in */
+    }
+    
+    .main-nav ul {
+        flex-direction: column;
+        align-items: flex-start; /* Align text to the left */
+        gap: 0; /* Remove gap, use padding instead */
+    }
+    
+    .main-nav li {
+        width: 100%;
+    }
+
+    .main-nav a {
+        display: block; /* Make the whole area clickable */
+        padding: 1rem 2rem; /* More padding for easier tapping */
+        width: 100%;
+        border-bottom: 1px solid #f3f4f6; /* Separator lines */
+    }
+
+    .main-nav a.btn {
+        margin: 1rem 2rem;
+        text-align: center;
+        width: calc(100% - 4rem); /* Adjust width */
+    }
+
+    .hamburger {
+        display: block;
+    }
+
+    /* New: Body overlay when menu is active */
+    body.menu-open::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+    }
+}

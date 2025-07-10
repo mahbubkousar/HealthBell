@@ -1,13 +1,165 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-    <a href="login.html">login</a>
-    <br>
-    <a href="register.html">register</a>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HealthBell - Your Personal Health Companion</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="main-header">
+      <div class="container">
+        <a href="/index.html" class="logo">HealthBell</a>
+        <nav class="main-nav">
+          <ul>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#how-it-works">How It Works</a></li>
+            <li><a href="/login.html">Login</a></li>
+            <li>
+              <a href="/register.html" class="btn btn-primary">Get Started</a>
+            </li>
+          </ul>
+        </nav>
+        <div class="hamburger"><i class="fa-solid fa-bars"></i></div>
+      </div>
+    </header>
+
+    <main>
+      <!-- Hero Section -->
+      <section
+        class="hero bg-cover bg-center py-20 text-white"
+        style="background: var(--gradient-primary)"
+      >
+        <div class="container text-center">
+          <h1 class="text-5xl font-bold mb-4 fade-in">
+            Manage Your Health, Seamlessly.
+          </h1>
+          <p class="text-xl mb-8 fade-in" style="transition-delay: 0.2s">
+            Your personal bridge between you, your doctor, and your pharmacy.
+            Never miss a dose again.
+          </p>
+          <a
+            href="/register.html"
+            class="btn bg-white text-blue-500 py-3 px-8 text-lg fade-in"
+            style="transition-delay: 0.4s"
+            >Sign Up for Free</a
+          >
+        </div>
+      </section>
+
+      <!-- Features Section -->
+      <section id="features" class="py-20">
+        <div class="container">
+          <h2 class="text-3xl font-bold text-center mb-12 fade-in">
+            All-in-One Health Management
+          </h2>
+          <div class="grid md:grid-cols-3 gap-8 text-center">
+            <div class="bg-white p-8 rounded-lg shadow-lg fade-in">
+              <i class="fa-solid fa-pills text-4xl mb-4 text-blue-500"></i>
+              <h3 class="text-xl font-bold mb-2">Smart Reminders</h3>
+              <p>
+                Get daily notifications for your medication schedule. Track
+                every dose with a simple tap.
+              </p>
+            </div>
+            <div
+              class="bg-white p-8 rounded-lg shadow-lg fade-in"
+              style="transition-delay: 0.2s"
+            >
+              <i
+                class="fa-solid fa-user-doctor text-4xl mb-4 text-teal-500"
+              ></i>
+              <h3 class="text-xl font-bold mb-2">Doctor Connect</h3>
+              <p>
+                Book appointments, receive digital prescriptions, and let your
+                doctor monitor your adherence.
+              </p>
+            </div>
+            <div
+              class="bg-white p-8 rounded-lg shadow-lg fade-in"
+              style="transition-delay: 0.4s"
+            >
+              <i
+                class="fa-solid fa-prescription-bottle-medical text-4xl mb-4 text-blue-500"
+              ></i>
+              <h3 class="text-xl font-bold mb-2">Easy Refills</h3>
+              <p>
+                Your pharmacy is automatically notified when you're low on
+                stock, with exclusive offers.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- How It Works Section -->
+      <section id="how-it-works" class="py-20 bg-white">
+        <div class="container">
+          <h2 class="text-3xl font-bold text-center mb-12 fade-in">
+            Simple Steps to Better Health
+          </h2>
+          <!-- Step 1 -->
+          <div class="grid md:grid-cols-2 gap-12 items-center mb-12">
+            <div class="fade-in">
+              <h3 class="text-2xl font-bold mb-4">
+                <span class="text-blue-500">01.</span> Get Your Prescription
+              </h3>
+              <p>
+                Your doctor digitally sends your prescription directly to your
+                HealthBell account after your consultation.
+              </p>
+            </div>
+            <div class="fade-in">
+              <img
+                src="https://via.placeholder.com/500x300/e2e8f0/9ca3af?text=Doctor+Consultation"
+                alt="Image of a doctor consulting with a patient. Aspect ratio 5:3"
+                class="rounded-lg shadow-lg w-full"
+              />
+            </div>
+          </div>
+          <!-- Step 2 -->
+          <div class="grid md:grid-cols-2 gap-12 items-center mb-12">
+            <div class="fade-in md:order-2">
+              <h3 class="text-2xl font-bold mb-4">
+                <span class="text-teal-500">02.</span> Track Your Doses
+              </h3>
+              <p>
+                Use your personalized dashboard to track each dose. We'll handle
+                the reminders and stock counting for you.
+              </p>
+            </div>
+            <div class="fade-in md:order-1">
+              <img
+                src="https://via.placeholder.com/500x300/e2e8f0/9ca3af?text=Patient+Using+Dashboard"
+                alt="Image of a person using a phone or laptop dashboard. Aspect ratio 5:3"
+                class="rounded-lg shadow-lg w-full"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="main-footer">
+      <div class="container">
+        <p>© 2024 HealthBell. All Rights Reserved. Your health, connected.</p>
+      </div>
+    </footer>
+
+    <!-- Global Script -->
+    <script src="assets/main.js"></script>
+  </body>
 </html>
