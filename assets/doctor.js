@@ -13,6 +13,7 @@ import {
   getDoc,
   orderBy,
   updateDoc,
+  onSnapshot,
 } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
 // --- DOM Element References ---
@@ -39,15 +40,20 @@ const upcomingAppointmentsContainer = document.getElementById(
 
 let doctorId, doctorName;
 let medicineCount = 0;
+// --- To manage our live listeners ---
+let unsubscribeAdherence = null;
+let unsubscribePendingAppointments = null;
+let unsubscribeUpcomingAppointments = null;
 
-// --- AUTHENTICATION & MASTER DATA LOADING ---
+// --- AUTHENTICATION & DATA LOADING ---
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     const userDoc = await getDoc(doc(db, "users", user.uid));
     if (userDoc.exists() && userDoc.data().role === "doctor") {
       doctorId = user.uid;
       doctorName = userDoc.data().name;
-      await loadAllDoctorData();
+      await loadStaticDoctorData();
+      setupAppointmentListeners();
     } else {
       window.location.href = "/login.html";
     }
@@ -56,17 +62,13 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-async function loadAllDoctorData() {
+async function loadStaticDoctorData() {
   loadingOverlay.style.display = "flex";
   try {
-    await Promise.all([
-      loadPatients(),
-      loadAppointmentRequests(),
-      loadUpcomingAppointments(),
-    ]);
+    await loadPatients();
     addMedicineField();
   } catch (error) {
-    console.error("Error loading doctor dashboard data:", error);
+    console.error("Error loading static doctor data:", error);
   } finally {
     loadingOverlay.style.display = "none";
   }
@@ -74,19 +76,21 @@ async function loadAllDoctorData() {
 
 // --- LOGOUT ---
 logoutButton.addEventListener("click", () => {
+  if (unsubscribeAdherence) unsubscribeAdherence();
+  if (unsubscribePendingAppointments) unsubscribePendingAppointments();
+  if (unsubscribeUpcomingAppointments) unsubscribeUpcomingAppointments();
   signOut(auth).then(() => (window.location.href = "/login.html"));
 });
 
-// --- APPOINTMENT MANAGEMENT ---
-async function loadAppointmentRequests() {
-  try {
-    const q = query(
-      collection(db, "appointments"),
-      where("doctorId", "==", doctorId),
-      where("status", "==", "pending"),
-      orderBy("createdAt", "asc")
-    );
-    const querySnapshot = await getDocs(q);
+// --- REAL-TIME APPOINTMENT MANAGEMENT ---
+function setupAppointmentListeners() {
+  const pendingQuery = query(
+    collection(db, "appointments"),
+    where("doctorId", "==", doctorId),
+    where("status", "==", "pending"),
+    orderBy("createdAt", "asc")
+  );
+  unsubscribePendingAppointments = onSnapshot(pendingQuery, (querySnapshot) => {
     if (querySnapshot.empty) {
       appointmentRequestsContainer.innerHTML =
         '<p class="loading-placeholder">No pending requests.</p>';
@@ -106,11 +110,41 @@ async function loadAppointmentRequests() {
         }">Reject</button></div></div>`;
       })
       .join("");
-  } catch (error) {
-    console.error("Error loading appointment requests: ", error);
-    appointmentRequestsContainer.innerHTML =
-      '<p class="loading-placeholder text-red-500">Could not load requests.</p>';
-  }
+  });
+
+  const today = new Date();
+  const inOneWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const upcomingQuery = query(
+    collection(db, "appointments"),
+    where("doctorId", "==", doctorId),
+    where("status", "==", "confirmed"),
+    where("slotDateTime", ">=", today.toISOString()),
+    where("slotDateTime", "<=", inOneWeek.toISOString()),
+    orderBy("slotDateTime", "asc")
+  );
+  unsubscribeUpcomingAppointments = onSnapshot(
+    upcomingQuery,
+    (querySnapshot) => {
+      if (querySnapshot.empty) {
+        upcomingAppointmentsContainer.innerHTML =
+          '<p class="loading-placeholder">No upcoming appointments in the next 7 days.</p>';
+        return;
+      }
+      upcomingAppointmentsContainer.innerHTML = querySnapshot.docs
+        .map((doc) => {
+          const appointment = doc.data();
+          return `<div class="p-3 border-l-4 border-purple-500 bg-purple-50 rounded-r-lg"><p class="font-semibold text-gray-800">${
+            appointment.patientName
+          }</p><p class="text-sm text-gray-600">${new Date(
+            appointment.slotDateTime
+          ).toLocaleString([], {
+            dateStyle: "medium",
+            timeStyle: "short",
+          })}</p></div>`;
+        })
+        .join("");
+    }
+  );
 }
 
 appointmentRequestsContainer.addEventListener("click", async (e) => {
@@ -125,54 +159,169 @@ appointmentRequestsContainer.addEventListener("click", async (e) => {
     await updateDoc(doc(db, "appointments", appointmentId), {
       status: newStatus,
     });
-    // Instead of removing, we can just reload the lists for consistency
-    await Promise.all([loadAppointmentRequests(), loadUpcomingAppointments()]);
   } catch (error) {
     console.error("Error updating appointment status: ", error);
     button.disabled = false;
   }
 });
 
-// --- UPCOMING APPOINTMENTS ---
-async function loadUpcomingAppointments() {
-  try {
-    const today = new Date();
-    const inOneWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-    const q = query(
-      collection(db, "appointments"),
-      where("doctorId", "==", doctorId),
-      where("status", "==", "confirmed"),
-      where("slotDateTime", ">=", today.toISOString()),
-      where("slotDateTime", "<=", inOneWeek.toISOString()),
-      orderBy("slotDateTime", "asc")
-    );
-    const querySnapshot = await getDocs(q);
-    if (querySnapshot.empty) {
-      upcomingAppointmentsContainer.innerHTML =
-        '<p class="loading-placeholder">No upcoming appointments in the next 7 days.</p>';
-      return;
-    }
-    upcomingAppointmentsContainer.innerHTML = querySnapshot.docs
-      .map((doc) => {
-        const appointment = doc.data();
-        return `<div class="p-3 border-l-4 border-purple-500 bg-purple-50 rounded-r-lg"><p class="font-semibold text-gray-800">${
-          appointment.patientName
-        }</p><p class="text-sm text-gray-600">${new Date(
-          appointment.slotDateTime
-        ).toLocaleString([], {
-          dateStyle: "medium",
-          timeStyle: "short",
-        })}</p></div>`;
-      })
-      .join("");
-  } catch (error) {
-    console.error("Error loading upcoming appointments: ", error);
-    upcomingAppointmentsContainer.innerHTML =
-      '<p class="loading-placeholder text-red-500">Could not load agenda. A Firestore index is likely required. Check the console.</p>';
+// --- REAL-TIME ADHERENCE REPORT ---
+patientAdherenceSelect.addEventListener("change", (e) => {
+  const patientId = e.target.value;
+  const patientName = e.target.options[e.target.selectedIndex].text;
+  if (unsubscribeAdherence) unsubscribeAdherence();
+  if (patientId) {
+    loadAdherenceReport(patientId, patientName);
+  } else {
+    adherenceReportContainer.innerHTML =
+      '<p class="loading-placeholder">Please select a patient to see their adherence history.</p>';
   }
+});
+
+function loadAdherenceReport(patientId, patientName) {
+  adherenceReportContainer.innerHTML = `<p class="loading-placeholder">Opening live report for ${patientName}...</p>`;
+  const logQuery = query(
+    collection(db, "medicationLog"),
+    where("patientId", "==", patientId)
+  );
+
+  unsubscribeAdherence = onSnapshot(
+    logQuery,
+    async (logSnapshot) => {
+      console.log("Real-time update received for adherence report!");
+      const presQuery = query(
+        collection(db, "prescriptions"),
+        where("patientId", "==", patientId),
+        where("status", "==", "active")
+      );
+      const presSnapshot = await getDocs(presQuery);
+
+      if (presSnapshot.empty) {
+        adherenceReportContainer.innerHTML = `<div class="text-center p-4 bg-blue-50 rounded-lg"><h4 class="font-semibold text-blue-800">No Active Prescriptions</h4><p class="text-blue-700">${patientName} has no active prescriptions to track.</p></div>`;
+        return;
+      }
+      const takenDoses = new Set();
+      logSnapshot.forEach((doc) => {
+        const log = doc.data();
+        takenDoses.add(`${log.dateTaken}_${log.medicineName}_${log.doseTime}`);
+      });
+
+      const reportData = {};
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // --- THE FIX IS HERE ---
+      // Create a 'tomorrow' date to ensure the loop includes all of today.
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+
+      presSnapshot.forEach((doc) => {
+        const prescription = doc.data();
+        const startDate = new Date(prescription.startDate + "T00:00:00");
+        prescription.medicines.forEach((med) => {
+          const endDate = new Date(startDate);
+          endDate.setDate(startDate.getDate() + med.totalDays);
+
+          // Loop up to (but not including) tomorrow. This is the robust way.
+          for (
+            let d = new Date(startDate);
+            d < tomorrow && d < endDate;
+            d.setDate(d.getDate() + 1)
+          ) {
+            const dateStr = d.toISOString().split("T")[0];
+            if (!reportData[dateStr]) {
+              reportData[dateStr] = [];
+            }
+            ["morning", "noon", "night"].forEach((doseTime) => {
+              if (med.dose[doseTime] > 0) {
+                const doseKey = `${dateStr}_${med.name}_${doseTime}`;
+                const doseEntry = {
+                  name: med.name,
+                  doseTime: doseTime,
+                  status: "",
+                };
+                if (takenDoses.has(doseKey)) {
+                  doseEntry.status = "Taken";
+                } else if (d < today) {
+                  doseEntry.status = "Missed";
+                } else {
+                  doseEntry.status = "Pending";
+                }
+                reportData[dateStr].push(doseEntry);
+              }
+            });
+          }
+        });
+      });
+      renderCombinedReport(reportData, patientName);
+    },
+    (error) => {
+      console.error("Error with adherence listener: ", error);
+      adherenceReportContainer.innerHTML =
+        '<p class="loading-placeholder text-red-500">Could not load live report.</p>';
+    }
+  );
 }
 
-// --- LOAD PATIENTS ---
+function renderCombinedReport(reportData, patientName) {
+  let reportHtml = `<h3 class="text-xl font-bold text-gray-800 mb-4">Adherence Log for: ${patientName}</h3>`;
+  let totalTaken = 0,
+    totalMissed = 0;
+  const todayStr = new Date().toISOString().split("T")[0];
+  for (const date in reportData) {
+    if (date < todayStr) {
+      const dayData = reportData[date];
+      totalTaken += dayData.filter((d) => d.status === "Taken").length;
+      totalMissed += dayData.filter((d) => d.status === "Missed").length;
+    }
+  }
+  const totalScheduledPast = totalTaken + totalMissed;
+  const adherenceRate =
+    totalScheduledPast > 0
+      ? ((totalTaken / totalScheduledPast) * 100).toFixed(0)
+      : 100;
+  reportHtml += `<div class="grid grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 rounded-lg border"><div class="text-center"><p class="text-2xl font-bold ${
+    adherenceRate >= 80 ? "text-green-600" : "text-orange-500"
+  }">${adherenceRate}%</p><p class="text-sm font-semibold text-gray-500">Overall Adherence</p></div><div class="text-center"><p class="text-2xl font-bold text-green-600">${totalTaken}</p><p class="text-sm font-semibold text-gray-500">Doses Taken</p></div><div class="text-center"><p class="text-2xl font-bold text-red-600">${totalMissed}</p><p class="text-sm font-semibold text-gray-500">Doses Missed</p></div></div>`;
+  const sortedDates = Object.keys(reportData).sort(
+    (a, b) => new Date(b) - new Date(a)
+  );
+  if (sortedDates.length === 0) {
+    adherenceReportContainer.innerHTML = `<div class="text-center p-4 bg-blue-50 rounded-lg"><h4 class="font-semibold text-blue-800">No Data Yet</h4><p class="text-blue-700">No medication history found for this patient.</p></div>`;
+    return;
+  }
+  sortedDates.forEach((date) => {
+    const dayData = reportData[date];
+    const formattedDate = new Date(date + "T00:00:00").toLocaleDateString(
+      "en-US",
+      { weekday: "long", month: "long", day: "numeric", year: "numeric" }
+    );
+    reportHtml += `<div class="mb-4"><h4 class="text-md font-bold text-gray-700 bg-gray-100 p-2 rounded-t-md"><span>${formattedDate}</span></h4><div class="border rounded-b-md divide-y divide-gray-200">`;
+    dayData.forEach((log) => {
+      let statusBadge = "",
+        iconHtml = "";
+      switch (log.status) {
+        case "Taken":
+          iconHtml = `<span class="text-green-500 mr-3 w-5 text-center"><i class="fa-solid fa-check-circle"></i></span>`;
+          statusBadge = `<span class="text-xs font-bold py-1 px-2 bg-green-100 text-green-700 rounded-full">TAKEN</span>`;
+          break;
+        case "Missed":
+          iconHtml = `<span class="text-red-500 mr-3 w-5 text-center"><i class="fa-solid fa-times-circle"></i></span>`;
+          statusBadge = `<span class="text-xs font-bold py-1 px-2 bg-red-100 text-red-700 rounded-full">MISSED</span>`;
+          break;
+        case "Pending":
+          iconHtml = `<span class="text-gray-400 mr-3 w-5 text-center"><i class="fa-solid fa-clock"></i></span>`;
+          statusBadge = `<span class="text-xs font-bold py-1 px-2 bg-gray-200 text-gray-700 rounded-full">PENDING</span>`;
+          break;
+      }
+      reportHtml += `<div class="p-3 flex justify-between items-center"><div class="flex items-center">${iconHtml}<span class="font-semibold text-gray-800">${log.name}</span><span class="text-sm ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded-full">${log.doseTime}</span></div>${statusBadge}</div>`;
+    });
+    reportHtml += `</div></div>`;
+  });
+  adherenceReportContainer.innerHTML = reportHtml;
+}
+
+// --- STATIC DATA FUNCTIONS ---
 async function loadPatients() {
   const q = query(collection(db, "users"), where("role", "==", "patient"));
   const querySnapshot = await getDocs(q);
@@ -190,127 +339,6 @@ async function loadPatients() {
     patientAdherenceSelect.appendChild(option.cloneNode(true));
   });
 }
-
-// --- ADHERENCE REPORT LOGIC ---
-patientAdherenceSelect.addEventListener("change", (e) => {
-  const patientId = e.target.value;
-  const patientName = e.target.options[e.target.selectedIndex].text;
-  if (patientId) {
-    loadAdherenceReport(patientId, patientName);
-  } else {
-    adherenceReportContainer.innerHTML =
-      '<p class="loading-placeholder">Please select a patient to see their adherence history.</p>';
-  }
-});
-
-async function loadAdherenceReport(patientId, patientName) {
-  adherenceReportContainer.innerHTML = `<p class="loading-placeholder">Calculating adherence report for ${patientName}...</p>`;
-  try {
-    const logQuery = query(
-      collection(db, "medicationLog"),
-      where("patientId", "==", patientId)
-    );
-    const presQuery = query(
-      collection(db, "prescriptions"),
-      where("patientId", "==", patientId),
-      where("status", "==", "active")
-    );
-    const [logSnapshot, presSnapshot] = await Promise.all([
-      getDocs(logQuery),
-      getDocs(presQuery),
-    ]);
-    if (presSnapshot.empty) {
-      adherenceReportContainer.innerHTML = `<div class="text-center p-4 bg-blue-50 rounded-lg"><h4 class="font-semibold text-blue-800">No Active Prescriptions</h4><p class="text-blue-700">${patientName} has no active prescriptions to track.</p></div>`;
-      return;
-    }
-    const takenDoses = new Set();
-    logSnapshot.forEach((doc) => {
-      const log = doc.data();
-      takenDoses.add(`${log.dateTaken}_${log.medicineName}_${log.doseTime}`);
-    });
-    const reportData = {};
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    presSnapshot.forEach((doc) => {
-      const prescription = doc.data();
-      const startDate = new Date(prescription.startDate + "T00:00:00");
-      prescription.medicines.forEach((med) => {
-        const endDate = new Date(startDate);
-        endDate.setDate(startDate.getDate() + med.totalDays);
-        for (
-          let d = new Date(startDate);
-          d < today && d < endDate;
-          d.setDate(d.getDate() + 1)
-        ) {
-          const dateStr = d.toISOString().split("T")[0];
-          if (!reportData[dateStr]) {
-            reportData[dateStr] = { taken: [], missed: [] };
-          }
-          ["morning", "noon", "night"].forEach((doseTime) => {
-            if (med.dose[doseTime] > 0) {
-              const doseKey = `${dateStr}_${med.name}_${doseTime}`;
-              const doseEntry = { name: med.name, doseTime: doseTime };
-              if (takenDoses.has(doseKey)) {
-                reportData[dateStr].taken.push(doseEntry);
-              } else {
-                reportData[dateStr].missed.push(doseEntry);
-              }
-            }
-          });
-        }
-      });
-    });
-    renderCombinedReport(reportData, patientName);
-  } catch (error) {
-    console.error("Error loading adherence report: ", error);
-    adherenceReportContainer.innerHTML =
-      '<p class="loading-placeholder text-red-500">Could not load report.</p>';
-  }
-}
-
-function renderCombinedReport(reportData, patientName) {
-  let reportHtml = `<h3 class="text-xl font-bold text-gray-800 mb-4">Adherence Log for: ${patientName}</h3>`;
-  const sortedDates = Object.keys(reportData).sort(
-    (a, b) => new Date(b) - new Date(a)
-  );
-  if (sortedDates.length === 0) {
-    adherenceReportContainer.innerHTML = `<div class="text-center p-4 bg-blue-50 rounded-lg"><h4 class="font-semibold text-blue-800">No Past Data</h4><p class="text-blue-700">No medication was scheduled on past days for ${patientName}.</p></div>`;
-    return;
-  }
-  const formatDate = (dateString) => {
-    const date = new Date(dateString + "T00:00:00");
-    const today = new Date();
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    if (date.toDateString() === today.toDateString()) return "Today";
-    if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
-    return date.toLocaleDateString(undefined, {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-    });
-  };
-  sortedDates.forEach((date) => {
-    const dayData = reportData[date];
-    reportHtml += `<div class="mb-4"><h4 class="text-md font-bold text-gray-700 bg-gray-100 p-2 rounded-t-md flex justify-between items-center"><span>${formatDate(
-      date
-    )}</span>${
-      dayData.missed.length === 0
-        ? '<span class="text-sm font-semibold text-green-600">Perfect Day!</span>'
-        : ""
-    }</h4><div class="border rounded-b-md divide-y divide-gray-200">`;
-    dayData.taken.forEach((log) => {
-      reportHtml += `<div class="p-3 flex items-center"><span class="text-green-500 mr-3">✅</span><div><span class="font-semibold text-gray-800">${log.name}</span><span class="text-sm ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded-full">${log.doseTime}</span></div></div>`;
-    });
-    dayData.missed.forEach((log) => {
-      reportHtml += `<div class="p-3 flex items-center bg-red-50"><span class="text-red-500 mr-3">❌</span><div><span class="font-semibold text-gray-800">${log.name}</span><span class="text-sm ml-2 px-2 py-1 bg-red-100 text-red-800 rounded-full">${log.doseTime}</span></div></div>`;
-    });
-    reportHtml += `</div></div>`;
-  });
-  adherenceReportContainer.innerHTML = reportHtml;
-}
-
-// --- PRESCRIPTION CREATION LOGIC ---
 function addMedicineField() {
   medicineCount++;
   const templateContent = medicineTemplate.content.cloneNode(true);

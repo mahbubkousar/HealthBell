@@ -47,9 +47,8 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 async function loadAllPatientData(patientId) {
-  loadingOverlay.style.display = "flex"; // Show loading spinner
+  loadingOverlay.style.display = "flex";
   try {
-    // Run all data-loading functions concurrently
     await Promise.all([
       loadPrescriptionsAndLogs(patientId),
       loadMyAppointments(patientId),
@@ -60,9 +59,7 @@ async function loadAllPatientData(patientId) {
       "A critical error occurred while loading dashboard data:",
       error
     );
-    // Optionally, display a global error message on the page
   } finally {
-    // Hide the spinner once all data is loaded (or has failed)
     loadingOverlay.style.display = "none";
   }
 }
@@ -364,12 +361,16 @@ async function handleDoseTaken(prescriptionId, medIndex, medName, doseTime) {
 
   try {
     await batch.commit();
+
+    // When stock hits 5, create notifications for BOTH the patient and the pharmacy.
     if (newRemainingCount === 5) {
       await createPatientNotification(
         "low_stock",
         `Your stock for ${medName} is running low. Contact your pharmacy.`
       );
+      await createPharmacyAlert(medName); // <-- THE FIX
     }
+
     await loadAllPatientData(currentUserId);
   } catch (error) {
     console.error("Failed to log dose: ", error);
@@ -393,6 +394,7 @@ async function saveStockCount(prescriptionId, medicineIndex, stockValue) {
   }
 }
 
+// --- NOTIFICATION CREATION FUNCTIONS ---
 async function createPatientNotification(type, message) {
   try {
     await addDoc(collection(db, "notifications"), {
@@ -404,5 +406,24 @@ async function createPatientNotification(type, message) {
     });
   } catch (error) {
     console.error("Error creating patient notification: ", error);
+  }
+}
+
+// NEW FUNCTION FOR PHARMACY ALERTS
+async function createPharmacyAlert(medicineName) {
+  try {
+    await addDoc(collection(db, "notifications"), {
+      type: "low_stock",
+      targetRole: "pharmacy", // Correctly targets all pharmacies
+      isRead: false,
+      createdAt: serverTimestamp(),
+      patientId: currentUserId,
+      patientName: currentUserName,
+      medicineName: medicineName,
+      message: `Patient ${currentUserName} is running low on ${medicineName}.`,
+    });
+    console.log("Pharmacy low stock alert created successfully.");
+  } catch (error) {
+    console.error("Error creating pharmacy alert: ", error);
   }
 }
