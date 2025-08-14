@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health News - HealthBell</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/health-news.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="main-header">
+        <div class="container">
+            <a href="/index.html" class="logo">HealthBell</a>
+            <nav class="main-nav">
+                <ul id="main-nav-list">
+                    <li><a href="#" id="dashboard-link">Dashboard</a></li>
+                    <li><a href="/community.html">Community</a></li>
+                    <li id="appointments-nav" style="display: none;"><a href="/book-appointment.html">Appointments</a></li>
+                    <li id="symptom-analyzer-nav" style="display: none;"><a href="/symptom-analyzer.html">AI Symptom Analyzer</a></li>
+                    <li id="schedule-nav" style="display: none;"><a href="/manage-schedule.html">My Schedule</a></li>
+                    <li><a href="/health-news.html" class="active">Health News</a></li>
+                    <li>
+                        <button id="logout-button" class="text-red-500 font-semibold">
+                            Logout
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+            <div class="hamburger"><i class="fa-solid fa-bars"></i></div>
+        </div>
+    </header>
+
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading Health News...</div>
+    </div>
+
+    <main class="dashboard-main container">
+        <div class="news-header">
+            <div class="news-title-section fade-in">
+                <h1 class="news-title">
+                    <i class="fas fa-newspaper"></i>
+                    Health News & Updates
+                </h1>
+                <p class="news-subtitle">
+                    Stay informed with the latest health news, medical breakthroughs, and wellness insights
+                </p>
+            </div>
+
+            <!-- News Controls -->
+            <div class="news-controls glass fade-in">
+                <div class="search-container">
+                    <div class="search-input-wrapper">
+                        <i class="fas fa-search"></i>
+                        <input 
+                            type="text" 
+                            id="news-search" 
+                            placeholder="Search health news..."
+                            class="search-input"
+                        >
+                        <button id="clear-search" class="clear-search-btn" style="display: none;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="filter-controls">
+                    <button class="filter-btn active" data-category="all">
+                        <i class="fas fa-globe"></i>
+                        All News
+                    </button>
+                    <button class="filter-btn" data-category="health">
+                        <i class="fas fa-heartbeat"></i>
+                        Health
+                    </button>
+                    <button class="filter-btn" data-category="medical">
+                        <i class="fas fa-stethoscope"></i>
+                        Medical
+                    </button>
+                    <button class="filter-btn" data-category="wellness">
+                        <i class="fas fa-leaf"></i>
+                        Wellness
+                    </button>
+                </div>
+
+                <div class="refresh-container">
+                    <button id="refresh-news" class="refresh-btn">
+                        <i class="fas fa-sync-alt"></i>
+                        Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Featured News Section -->
+        <section class="featured-news-section fade-in">
+            <h2 class="section-subtitle">
+                <i class="fas fa-star"></i>
+                Featured Stories
+            </h2>
+            <div id="featured-news" class="featured-news-grid">
+                <!-- Featured news will be loaded here -->
+                <div class="news-loading">
+                    <div class="loading-skeleton featured-skeleton">
+                        <div class="skeleton-image"></div>
+                        <div class="skeleton-content">
+                            <div class="skeleton-title"></div>
+                            <div class="skeleton-text"></div>
+                            <div class="skeleton-meta"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- All News Section -->
+        <section class="all-news-section fade-in">
+            <div class="news-section-header">
+                <h2 class="section-subtitle">
+                    <i class="fas fa-list"></i>
+                    Latest Health News
+                </h2>
+                <div class="news-stats">
+                    <span id="news-count" class="news-count">Loading articles...</span>
+                </div>
+            </div>
+            
+            <div id="news-grid" class="news-grid">
+                <!-- News articles will be loaded here -->
+                <div class="news-loading-grid">
+                    <!-- Loading skeletons -->
+                    <div class="news-card-skeleton">
+                        <div class="skeleton-image"></div>
+                        <div class="skeleton-content">
+                            <div class="skeleton-title"></div>
+                            <div class="skeleton-text"></div>
+                            <div class="skeleton-meta"></div>
+                        </div>
+                    </div>
+                    <div class="news-card-skeleton">
+                        <div class="skeleton-image"></div>
+                        <div class="skeleton-content">
+                            <div class="skeleton-title"></div>
+                            <div class="skeleton-text"></div>
+                            <div class="skeleton-meta"></div>
+                        </div>
+                    </div>
+                    <div class="news-card-skeleton">
+                        <div class="skeleton-image"></div>
+                        <div class="skeleton-content">
+                            <div class="skeleton-title"></div>
+                            <div class="skeleton-text"></div>
+                            <div class="skeleton-meta"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Load More Button -->
+            <div class="load-more-container">
+                <button id="load-more" class="load-more-btn" style="display: none;">
+                    <i class="fas fa-plus"></i>
+                    Load More Articles
+                </button>
+            </div>
+        </section>
+
+        <!-- No Results State -->
+        <div id="no-results" class="no-results" style="display: none;">
+            <div class="no-results-content">
+                <i class="fas fa-search"></i>
+                <h3>No articles found</h3>
+                <p>Try adjusting your search terms or filters</p>
+                <button class="btn btn-primary" onclick="clearSearch()">
+                    Clear Search
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- News Article Modal -->
+    <div id="news-modal" class="news-modal">
+        <div class="news-modal-content glass">
+            <div class="news-modal-header">
+                <button class="news-modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="news-modal-body" class="news-modal-body">
+                <!-- Article content will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <footer class="main-footer">
+        <div class="container">
+            <p>© 2024 HealthBell. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="assets/main.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js" type="module"></script>
+    <script src="firebase-config.js" type="module"></script>
+    <script src="assets/health-news.js" type="module"></script>
+</body>
+</html>
