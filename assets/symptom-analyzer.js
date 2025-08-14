@@ -37,8 +37,8 @@ let conversationId = null;
 let isProcessing = false;
 
 // Gemini API Configuration
-const GEMINI_API_KEY = "AIzaSyDyKbBeFpH2-lKdxjqO6PNrXJUFTwGb-Gk"; // You should replace this with your actual API key
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_API_KEY = "AIzaSyAWb08i-s9reNQ6_WxJSSDTOIC69YAEFwQ"; // Updated API key from .env
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 // System prompt for medical symptom analysis
 const SYSTEM_PROMPT = `You are HealthBell AI, a medical symptom analyzer assistant. You provide helpful, accurate, and empathetic responses about health symptoms while following these guidelines:
@@ -226,7 +226,7 @@ async function callGeminiAPI(userMessage) {
         temperature: 0.7,
         topK: 40,
         topP: 0.95,
-        maxOutputTokens: 1024,
+        maxOutputTokens: 1024
       },
       safetySettings: [
         {
@@ -248,6 +248,9 @@ async function callGeminiAPI(userMessage) {
       ]
     };
 
+    console.log("Making API request to:", GEMINI_API_URL);
+    console.log("Request body:", JSON.stringify(requestBody, null, 2));
+
     const response = await fetch(GEMINI_API_URL, {
       method: "POST",
       headers: {
@@ -256,17 +259,23 @@ async function callGeminiAPI(userMessage) {
       body: JSON.stringify(requestBody)
     });
 
+    console.log("Response status:", response.status);
+    
     if (!response.ok) {
-      throw new Error(`API request failed: ${response.status}`);
+      const errorText = await response.text();
+      console.error("API error response:", errorText);
+      throw new Error(`API request failed: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
+    console.log("API response data:", data);
     
-    if (data.candidates && data.candidates.length > 0) {
+    if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
       return {
         text: data.candidates[0].content.parts[0].text
       };
     } else {
+      console.error("Unexpected API response structure:", data);
       throw new Error("No response from AI model");
     }
     

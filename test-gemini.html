@@ -11,40 +11,55 @@
     <div id="result"></div>
 
     <script>
-        const GEMINI_API_KEY = "AIzaSyDyKbBeFpH2-lKdxjqO6PNrXJUFTwGb-Gk";
-        const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
+        const GEMINI_API_KEY = "AIzaSyAWb08i-s9reNQ6_WxJSSDTOIC69YAEFwQ";
+        const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
         document.getElementById('test-btn').addEventListener('click', async () => {
             const resultDiv = document.getElementById('result');
             resultDiv.innerHTML = 'Testing...';
             
             try {
+                const requestBody = {
+                    contents: [
+                        {
+                            parts: [
+                                {
+                                    text: "Hello, this is a test. Please respond with 'API is working!'"
+                                }
+                            ]
+                        }
+                    ],
+                    generationConfig: {
+                        temperature: 0.7,
+                        maxOutputTokens: 100
+                    }
+                };
+
+                console.log('Testing API URL:', GEMINI_API_URL);
+                console.log('Request body:', JSON.stringify(requestBody, null, 2));
+
                 const response = await fetch(GEMINI_API_URL, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json"
                     },
-                    body: JSON.stringify({
-                        contents: [
-                            {
-                                parts: [
-                                    {
-                                        text: "Hello, this is a test. Please respond with 'API is working!'"
-                                    }
-                                ]
-                            }
-                        ]
-                    })
+                    body: JSON.stringify(requestBody)
                 });
+
+                console.log('Response status:', response.status);
 
                 if (response.ok) {
                     const data = await response.json();
-                    resultDiv.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                    console.log('Response data:', data);
+                    resultDiv.innerHTML = '<h3>Success!</h3><pre>' + JSON.stringify(data, null, 2) + '</pre>';
                 } else {
-                    resultDiv.innerHTML = 'Error: ' + response.status + ' - ' + response.statusText;
+                    const errorText = await response.text();
+                    console.error('Error response:', errorText);
+                    resultDiv.innerHTML = '<h3>Error:</h3><p>Status: ' + response.status + '</p><pre>' + errorText + '</pre>';
                 }
             } catch (error) {
-                resultDiv.innerHTML = 'Error: ' + error.message;
+                console.error('Fetch error:', error);
+                resultDiv.innerHTML = '<h3>Network Error:</h3><p>' + error.message + '</p>';
             }
         });
     </script>
