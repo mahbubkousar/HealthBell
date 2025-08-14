@@ -508,6 +508,21 @@
     padding-left: 1rem;
 }
 
+.reply-item {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.reply-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+    background: var(--gradient-secondary);
+}
+
 /* Post Modal */
 .post-modal {
     position: fixed;

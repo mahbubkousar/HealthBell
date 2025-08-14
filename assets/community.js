@@ -1,6 +1,6 @@
 // assets/community.js - Community Discussion Functionality
 import { auth, db } from "../firebase-config.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
 import {
   collection,
   addDoc,
@@ -30,6 +30,7 @@ const postModalClose = document.querySelector(".post-modal-close");
 const postModalBody = document.getElementById("post-modal-body");
 const currentUsername = document.getElementById("current-username");
 const currentUserBadge = document.getElementById("current-user-badge");
+const logoutButton = document.getElementById("logout-button");
 
 // Global Variables
 let currentUser = null;
@@ -125,6 +126,18 @@ function setupEventListeners() {
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closePostModal();
   });
+
+  // Logout button
+  if (logoutButton) {
+    logoutButton.addEventListener("click", () => {
+      signOut(auth).then(() => {
+        window.location.href = "/login.html";
+      }).catch((error) => {
+        console.error("Error signing out:", error);
+        showNotification("Failed to logout. Please try again.", "error");
+      });
+    });
+  }
 }
 
 // Handle Create Post
@@ -387,7 +400,7 @@ async function loadPostWithComments(post) {
   const hasDownvoted = post.votes?.downvotes?.includes(currentUser.uid);
 
   postModalBody.innerHTML = `
-    <div class="modal-post">
+    <div class="modal-post" data-post-id="${post.id}">
       <div class="post-header">
         <div class="user-avatar">
           <i class="fas fa-user"></i>
@@ -510,12 +523,51 @@ function loadComments(postId) {
     orderBy("createdAt", "asc")
   );
 
-  onSnapshot(commentsQuery, (snapshot) => {
+  onSnapshot(commentsQuery, async (snapshot) => {
     const comments = [];
     snapshot.forEach((doc) => {
       comments.push({ id: doc.id, ...doc.data() });
     });
-    renderComments(comments);
+    
+    // Load replies for all comments
+    const commentsWithReplies = await loadRepliesForComments(comments, postId);
+    renderComments(commentsWithReplies);
+  });
+}
+
+// Load Replies for Comments
+async function loadRepliesForComments(comments, postId) {
+  const repliesQuery = query(
+    collection(db, "communityReplies"),
+    where("postId", "==", postId),
+    orderBy("createdAt", "asc")
+  );
+
+  // Use real-time listener for replies too
+  return new Promise((resolve) => {
+    onSnapshot(repliesQuery, (repliesSnapshot) => {
+      const replies = [];
+      repliesSnapshot.forEach((doc) => {
+        replies.push({ id: doc.id, ...doc.data() });
+      });
+
+      // Group replies by parent comment
+      const repliesByComment = {};
+      replies.forEach(reply => {
+        if (!repliesByComment[reply.parentCommentId]) {
+          repliesByComment[reply.parentCommentId] = [];
+        }
+        repliesByComment[reply.parentCommentId].push(reply);
+      });
+
+      // Attach replies to comments
+      const commentsWithReplies = comments.map(comment => ({
+        ...comment,
+        replies: repliesByComment[comment.id] || []
+      }));
+      
+      resolve(commentsWithReplies);
+    });
   });
 }
 
@@ -538,6 +590,12 @@ function renderComments(comments) {
 function createCommentHTML(comment) {
   const timeAgo = getTimeAgo(comment.createdAt?.toDate());
   const badge = getUserBadge(comment.authorRole);
+  const hasUpvoted = comment.votes?.upvotes?.includes(currentUser.uid);
+  const hasDownvoted = comment.votes?.downvotes?.includes(currentUser.uid);
+
+  const repliesHTML = comment.replies && comment.replies.length > 0 
+    ? `<div class="replies">${comment.replies.map(reply => createReplyHTML(reply)).join('')}</div>`
+    : '';
 
   return `
     <div class="comment-item">
@@ -560,12 +618,12 @@ function createCommentHTML(comment) {
       
       <div class="comment-actions">
         <div class="vote-buttons">
-          <button class="vote-btn upvote" data-comment-id="${comment.id}" data-action="upvote">
+          <button class="vote-btn upvote ${hasUpvoted ? 'voted' : ''}" data-comment-id="${comment.id}" data-action="upvote">
             <i class="fas fa-arrow-up"></i>
             <span>${comment.votes?.upvotes?.length || 0}</span>
           </button>
           <span class="vote-score">${comment.votes?.score || 0}</span>
-          <button class="vote-btn downvote" data-comment-id="${comment.id}" data-action="downvote">
+          <button class="vote-btn downvote ${hasDownvoted ? 'voted' : ''}" data-comment-id="${comment.id}" data-action="downvote">
             <i class="fas fa-arrow-down"></i>
             <span>${comment.votes?.downvotes?.length || 0}</span>
           </button>
@@ -573,8 +631,53 @@ function createCommentHTML(comment) {
         
         <button class="reply-btn" data-comment-id="${comment.id}">
           <i class="fas fa-reply"></i>
-          Reply
+          Reply ${comment.replies?.length > 0 ? `(${comment.replies.length})` : ''}
         </button>
+      </div>
+      
+      ${repliesHTML}
+    </div>
+  `;
+}
+
+// Create Reply HTML
+function createReplyHTML(reply) {
+  const timeAgo = getTimeAgo(reply.createdAt?.toDate());
+  const badge = getUserBadge(reply.authorRole);
+  const hasUpvoted = reply.votes?.upvotes?.includes(currentUser.uid);
+  const hasDownvoted = reply.votes?.downvotes?.includes(currentUser.uid);
+
+  return `
+    <div class="reply-item">
+      <div class="comment-header">
+        <div class="comment-avatar reply-avatar">
+          <i class="fas fa-user"></i>
+        </div>
+        <div class="comment-user-info">
+          <div class="comment-username">
+            ${reply.authorName}
+            <span class="user-badge ${badge.class}">${badge.html}</span>
+          </div>
+          <div class="comment-time">${timeAgo}</div>
+        </div>
+      </div>
+      
+      <div class="comment-content">
+        ${reply.content}
+      </div>
+      
+      <div class="comment-actions">
+        <div class="vote-buttons">
+          <button class="vote-btn upvote ${hasUpvoted ? 'voted' : ''}" data-reply-id="${reply.id}" data-action="upvote">
+            <i class="fas fa-arrow-up"></i>
+            <span>${reply.votes?.upvotes?.length || 0}</span>
+          </button>
+          <span class="vote-score">${reply.votes?.score || 0}</span>
+          <button class="vote-btn downvote ${hasDownvoted ? 'voted' : ''}" data-reply-id="${reply.id}" data-action="downvote">
+            <i class="fas fa-arrow-down"></i>
+            <span>${reply.votes?.downvotes?.length || 0}</span>
+          </button>
+        </div>
       </div>
     </div>
   `;
@@ -584,7 +687,16 @@ function createCommentHTML(comment) {
 function setupCommentEventListeners() {
   // Comment vote buttons
   postModalBody.querySelectorAll(".comment-item .vote-btn").forEach(btn => {
-    btn.addEventListener("click", handleCommentVote);
+    if (btn.dataset.commentId) {
+      btn.addEventListener("click", handleCommentVote);
+    } else if (btn.dataset.replyId) {
+      btn.addEventListener("click", handleReplyVote);
+    }
+  });
+
+  // Reply vote buttons
+  postModalBody.querySelectorAll(".reply-item .vote-btn").forEach(btn => {
+    btn.addEventListener("click", handleReplyVote);
   });
 
   // Reply buttons
@@ -646,11 +758,153 @@ async function handleCommentVote(e) {
   }
 }
 
-// Handle Reply (placeholder for future implementation)
+// Handle Reply Vote
+async function handleReplyVote(e) {
+  e.stopPropagation();
+  
+  const replyId = e.currentTarget.dataset.replyId;
+  const action = e.currentTarget.dataset.action;
+  const userId = currentUser.uid;
+
+  try {
+    const replyRef = doc(db, "communityReplies", replyId);
+    const replyDoc = await getDoc(replyRef);
+    
+    if (!replyDoc.exists()) return;
+    
+    const replyData = replyDoc.data();
+    const upvotes = replyData.votes?.upvotes || [];
+    const downvotes = replyData.votes?.downvotes || [];
+    
+    let newUpvotes = [...upvotes];
+    let newDownvotes = [...downvotes];
+    
+    if (action === "upvote") {
+      if (upvotes.includes(userId)) {
+        newUpvotes = upvotes.filter(id => id !== userId);
+      } else {
+        newUpvotes.push(userId);
+        newDownvotes = downvotes.filter(id => id !== userId);
+      }
+    } else {
+      if (downvotes.includes(userId)) {
+        newDownvotes = downvotes.filter(id => id !== userId);
+      } else {
+        newDownvotes.push(userId);
+        newUpvotes = upvotes.filter(id => id !== userId);
+      }
+    }
+    
+    const score = newUpvotes.length - newDownvotes.length;
+    
+    await updateDoc(replyRef, {
+      votes: {
+        upvotes: newUpvotes,
+        downvotes: newDownvotes,
+        score: score
+      }
+    });
+
+  } catch (error) {
+    console.error("Error voting on reply:", error);
+    showNotification("Failed to vote. Please try again.", "error");
+  }
+}
+
+// Handle Reply
 function handleReply(e) {
   const commentId = e.currentTarget.dataset.commentId;
-  // For now, just show notification
-  showNotification("Reply feature coming soon!", "info");
+  const commentItem = e.currentTarget.closest('.comment-item');
+  
+  // Remove any existing reply forms
+  const existingForm = commentItem.querySelector('.reply-form');
+  if (existingForm) {
+    existingForm.remove();
+    return;
+  }
+  
+  // Create reply form
+  const replyFormHTML = `
+    <div class="reply-form">
+      <textarea class="reply-textarea" placeholder="Write a reply..." required></textarea>
+      <div class="reply-actions">
+        <button type="button" class="reply-cancel">Cancel</button>
+        <button type="button" class="reply-submit" data-comment-id="${commentId}">Reply</button>
+      </div>
+    </div>
+  `;
+  
+  commentItem.insertAdjacentHTML('beforeend', replyFormHTML);
+  
+  // Focus on textarea
+  const textarea = commentItem.querySelector('.reply-textarea');
+  textarea.focus();
+  
+  // Setup reply form event listeners
+  const replyForm = commentItem.querySelector('.reply-form');
+  const replySubmit = replyForm.querySelector('.reply-submit');
+  const replyCancel = replyForm.querySelector('.reply-cancel');
+  
+  replySubmit.addEventListener('click', (e) => handleSubmitReply(e, commentId));
+  replyCancel.addEventListener('click', () => replyForm.remove());
+  
+  // Submit on Ctrl+Enter
+  textarea.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 'Enter') {
+      handleSubmitReply(e, commentId);
+    }
+  });
+}
+
+// Handle Submit Reply
+async function handleSubmitReply(e, parentCommentId) {
+  const replyForm = e.target.closest('.reply-form');
+  const textarea = replyForm.querySelector('.reply-textarea');
+  const content = textarea.value.trim();
+  
+  if (!content) return;
+
+  const submitBtn = e.target;
+  submitBtn.classList.add('loading');
+  submitBtn.disabled = true;
+  
+  try {
+    // Get the post ID from the current modal
+    const postId = getCurrentPostId();
+    
+    await addDoc(collection(db, "communityReplies"), {
+      postId,
+      parentCommentId,
+      content,
+      authorId: currentUser.uid,
+      authorName: currentUserData.name,
+      authorRole: currentUserData.role,
+      createdAt: serverTimestamp(),
+      votes: {
+        upvotes: [],
+        downvotes: [],
+        score: 0
+      }
+    });
+
+    // Remove the reply form
+    replyForm.remove();
+    
+    showNotification("Reply added successfully!", "success");
+    
+  } catch (error) {
+    console.error("Error adding reply:", error);
+    showNotification("Failed to add reply.", "error");
+  } finally {
+    submitBtn.classList.remove('loading');
+    submitBtn.disabled = false;
+  }
+}
+
+// Get current post ID from modal
+function getCurrentPostId() {
+  const modalPost = postModalBody.querySelector('[data-post-id]');
+  return modalPost ? modalPost.dataset.postId : null;
 }
 
 // Utility Functions
