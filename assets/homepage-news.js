@@ -1,6 +1,6 @@
 // assets/homepage-news.js - Homepage Health News Preview
 // NewsAPI Configuration
-const NEWS_API_KEY = "bc1b73e7e2f8415abaac0e33dccd9c2a";
+const NEWS_API_KEY = "8a7e86793d054c198f6919d7ff21bafe";
 const NEWS_API_URL = "https://newsapi.org/v2/top-headlines";
 
 // DOM Elements
@@ -20,14 +20,23 @@ document.addEventListener('DOMContentLoaded', function() {
 // Load health news for homepage
 async function loadHomepageNews() {
   try {
+    const apiUrl = `${NEWS_API_URL}?country=us&category=health&pageSize=6&apiKey=${NEWS_API_KEY}`;
+    console.log("Fetching news from:", apiUrl);
+    
     // Fetch health news from NewsAPI
-    const response = await fetch(`${NEWS_API_URL}?country=us&category=health&pageSize=6&apiKey=${NEWS_API_KEY}`);
+    const response = await fetch(apiUrl);
+    
+    console.log("Response status:", response.status);
+    console.log("Response headers:", response.headers);
     
     if (!response.ok) {
-      throw new Error(`NewsAPI request failed: ${response.status}`);
+      const errorText = await response.text();
+      console.error("API error response:", errorText);
+      throw new Error(`NewsAPI request failed: ${response.status} - ${errorText}`);
     }
     
     const data = await response.json();
+    console.log("API response data:", data);
     
     if (data.status === "ok" && data.articles) {
       homepageArticles = data.articles.filter(article => 
@@ -38,8 +47,10 @@ async function loadHomepageNews() {
         article.urlToImage
       ).slice(0, 3); // Show only 3 articles on homepage
       
+      console.log("Filtered articles:", homepageArticles.length);
       renderHomepageNews();
     } else {
+      console.error("Invalid response structure:", data);
       throw new Error("Invalid response from NewsAPI");
     }
     
