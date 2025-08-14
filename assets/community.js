@@ -78,6 +78,35 @@ function updateUserInfo() {
   const badge = getUserBadge(currentUserData.role);
   currentUserBadge.innerHTML = badge.html;
   currentUserBadge.className = `user-badge ${badge.class}`;
+  
+  // Update navigation based on user role
+  updateNavigation();
+}
+
+// Update Navigation Based on User Role
+function updateNavigation() {
+  const dashboardLink = document.getElementById("dashboard-link");
+  const appointmentsNav = document.getElementById("appointments-nav");
+  const symptomAnalyzerNav = document.getElementById("symptom-analyzer-nav");
+  const scheduleNav = document.getElementById("schedule-nav");
+  
+  // Set dashboard link based on role
+  switch (currentUserData.role) {
+    case "doctor":
+      dashboardLink.href = "/doctor-dashboard.html";
+      scheduleNav.style.display = "block"; // Show schedule for doctors
+      break;
+    case "pharmacy":
+      dashboardLink.href = "/pharmacy-dashboard.html";
+      // No appointments, symptom analyzer, or schedule for pharmacy
+      break;
+    case "patient":
+    default:
+      dashboardLink.href = "/patient-dashboard.html";
+      appointmentsNav.style.display = "block"; // Show appointments for patients
+      symptomAnalyzerNav.style.display = "block"; // Show symptom analyzer for patients
+      break;
+  }
 }
 
 // Get User Badge HTML and Class

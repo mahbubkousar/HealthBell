@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Symptom Analyzer - HealthBell</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/symptom-analyzer.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="main-header">
+        <div class="container">
+            <a href="/index.html" class="logo">HealthBell</a>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="/patient-dashboard.html">Dashboard</a></li>
+                    <li><a href="/community.html">Community</a></li>
+                    <li><a href="/book-appointment.html">Book Appointment</a></li>
+                    <li><a href="/symptom-analyzer.html" class="active">AI Symptom Analyzer</a></li>
+                    <li>
+                        <button id="logout-button" class="text-red-500 font-semibold">
+                            Logout
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+            <div class="hamburger"><i class="fa-solid fa-bars"></i></div>
+        </div>
+    </header>
+
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading AI Symptom Analyzer...</div>
+    </div>
+
+    <main class="dashboard-main container">
+        <div class="analyzer-header">
+            <div class="analyzer-title-section fade-in">
+                <h1 class="analyzer-title">
+                    <i class="fas fa-robot"></i>
+                    AI Symptom Analyzer
+                </h1>
+                <p class="analyzer-subtitle">
+                    Powered by Google Gemini AI - Describe your symptoms and get personalized health insights
+                </p>
+            </div>
+
+            <!-- Disclaimer -->
+            <div class="medical-disclaimer glass fade-in">
+                <div class="disclaimer-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="disclaimer-content">
+                    <h3>Important Medical Disclaimer</h3>
+                    <p>This AI symptom analyzer is for informational purposes only and should not replace professional medical advice. Always consult with qualified healthcare professionals for proper diagnosis and treatment.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="analyzer-layout">
+            <!-- Chat Interface -->
+            <div class="chat-container glass fade-in">
+                <div class="chat-header">
+                    <div class="ai-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="ai-info">
+                        <h3>HealthBell AI Assistant</h3>
+                        <span class="ai-status">
+                            <i class="fas fa-circle online"></i>
+                            Ready to help
+                        </span>
+                    </div>
+                    <button id="clear-chat" class="clear-chat-btn" title="Clear conversation">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+
+                <div id="chat-messages" class="chat-messages">
+                    <div class="message ai-message">
+                        <div class="message-avatar">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div class="message-content">
+                            <div class="message-text">
+                                Hello! I'm your AI health assistant. I can help analyze your symptoms and provide health guidance. Please describe what you're experiencing, and I'll do my best to help you understand your symptoms better.
+                                <br><br>
+                                <strong>To get started, you can tell me:</strong>
+                                <ul>
+                                    <li>What symptoms are you experiencing?</li>
+                                    <li>When did they start?</li>
+                                    <li>How severe are they?</li>
+                                    <li>Any other relevant information</li>
+                                </ul>
+                            </div>
+                            <div class="message-time">Just now</div>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="chat-form" class="chat-input-container">
+                    <div class="chat-input-wrapper">
+                        <textarea 
+                            id="symptom-input" 
+                            placeholder="Describe your symptoms here... (e.g., 'I have a headache and fever for 2 days')"
+                            class="chat-input"
+                            rows="3"
+                            required
+                        ></textarea>
+                        <button type="submit" id="send-btn" class="send-btn">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                    <div class="input-suggestions">
+                        <button type="button" class="suggestion-btn" data-text="I have a headache and feel dizzy">
+                            Headache & Dizziness
+                        </button>
+                        <button type="button" class="suggestion-btn" data-text="I have a fever and sore throat">
+                            Fever & Sore Throat
+                        </button>
+                        <button type="button" class="suggestion-btn" data-text="I have stomach pain and nausea">
+                            Stomach Issues
+                        </button>
+                        <button type="button" class="suggestion-btn" data-text="I have chest pain and shortness of breath">
+                            Chest Pain
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Quick Actions Sidebar -->
+            <div class="quick-actions-sidebar fade-in">
+                <div class="quick-actions-card glass">
+                    <h3 class="sidebar-title">
+                        <i class="fas fa-bolt"></i>
+                        Quick Actions
+                    </h3>
+                    
+                    <div class="quick-actions-list">
+                        <button class="quick-action-btn" id="emergency-btn">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Emergency Symptoms
+                        </button>
+                        
+                        <button class="quick-action-btn" id="medication-check">
+                            <i class="fas fa-pills"></i>
+                            Medication Interaction
+                        </button>
+                        
+                        <button class="quick-action-btn" id="health-tips">
+                            <i class="fas fa-lightbulb"></i>
+                            General Health Tips
+                        </button>
+                        
+                        <a href="/book-appointment.html" class="quick-action-btn appointment-btn">
+                            <i class="fas fa-calendar-plus"></i>
+                            Book Appointment
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Previous Conversations -->
+                <div class="conversation-history glass">
+                    <h3 class="sidebar-title">
+                        <i class="fas fa-history"></i>
+                        Recent Conversations
+                    </h3>
+                    <div id="conversation-history" class="history-list">
+                        <p class="no-history">No previous conversations</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="main-footer">
+        <div class="container">
+            <p>© 2024 HealthBell. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Emergency Modal -->
+    <div id="emergency-modal" class="modal">
+        <div class="modal-content glass">
+            <div class="modal-header">
+                <h3><i class="fas fa-exclamation-triangle"></i> Emergency Symptoms</h3>
+                <button class="modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="emergency-warning">
+                    <p><strong>Seek immediate medical attention if you experience:</strong></p>
+                    <ul>
+                        <li>Severe chest pain or pressure</li>
+                        <li>Difficulty breathing or shortness of breath</li>
+                        <li>Sudden severe headache</li>
+                        <li>Loss of consciousness</li>
+                        <li>Severe allergic reactions</li>
+                        <li>Signs of stroke (face drooping, arm weakness, speech difficulty)</li>
+                        <li>Severe bleeding</li>
+                        <li>High fever with severe symptoms</li>
+                    </ul>
+                    <div class="emergency-actions">
+                        <a href="tel:911" class="emergency-btn">
+                            <i class="fas fa-phone"></i> Call 911
+                        </a>
+                        <a href="tel:911" class="emergency-btn secondary">
+                            <i class="fas fa-hospital"></i> Emergency Room
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/main.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js" type="module"></script>
+    <script src="firebase-config.js" type="module"></script>
+    <script src="assets/symptom-analyzer.js" type="module"></script>
+</body>
+</html>

@@ -19,10 +19,12 @@
         <div class="container">
             <a href="/index.html" class="logo">HealthBell</a>
             <nav class="main-nav">
-                <ul>
-                    <li><a href="/patient-dashboard.html">Dashboard</a></li>
+                <ul id="main-nav-list">
+                    <li><a href="#" id="dashboard-link">Dashboard</a></li>
                     <li><a href="/community.html" class="active">Community</a></li>
-                    <li><a href="/book-appointment.html">Appointments</a></li>
+                    <li id="appointments-nav" style="display: none;"><a href="/book-appointment.html">Appointments</a></li>
+                    <li id="symptom-analyzer-nav" style="display: none;"><a href="/symptom-analyzer.html">AI Symptom Analyzer</a></li>
+                    <li id="schedule-nav" style="display: none;"><a href="/manage-schedule.html">My Schedule</a></li>
                     <li>
                         <button id="logout-button" class="text-red-500 font-semibold">
                             Logout
