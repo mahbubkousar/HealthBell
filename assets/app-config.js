@@ -1,4 +1,0 @@
-window.APP_CONFIG = {
-    GEMINI_API_KEY: "__GEMINI_API_KEY__",
-    NEWS_API_KEY: "__NEWS_API_KEY__"
-};

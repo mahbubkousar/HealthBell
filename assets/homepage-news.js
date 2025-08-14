@@ -1,6 +1,6 @@
 // assets/homepage-news.js - Homepage Health News Preview
 // NewsAPI Configuration
-const NEWS_API_KEY = window.APP_CONFIG.NEWS_API_KEY;
+const NEWS_API_KEY = "8a7e86793d054c198f6919d7ff21bafe";
 const NEWS_API_URL = "https://newsapi.org/v2/top-headlines";
 
 // DOM Elements

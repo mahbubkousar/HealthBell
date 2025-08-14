@@ -37,7 +37,7 @@ let conversationId = null;
 let isProcessing = false;
 
 // Gemini API Configuration
-const GEMINI_API_KEY = window.APP_CONFIG.GEMINI_API_KEY;
+const GEMINI_API_KEY = "AIzaSyAWb08i-s9reNQ6_WxJSSDTOIC69YAEFwQ"; // Updated API key from .env
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 // System prompt for medical symptom analysis
