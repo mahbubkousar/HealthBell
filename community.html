@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Community - HealthBell</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/community.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="main-header">
+        <div class="container">
+            <a href="/index.html" class="logo">HealthBell</a>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="/patient-dashboard.html">Dashboard</a></li>
+                    <li><a href="/community.html" class="active">Community</a></li>
+                    <li><a href="/book-appointment.html">Appointments</a></li>
+                    <li>
+                        <button id="logout-button" class="text-red-500 font-semibold">
+                            Logout
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+            <div class="hamburger"><i class="fa-solid fa-bars"></i></div>
+        </div>
+    </header>
+
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading Community...</div>
+    </div>
+
+    <main class="dashboard-main container">
+        <div class="community-header">
+            <h1 class="community-title fade-in">
+                <i class="fas fa-users"></i>
+                HealthBell Community
+            </h1>
+            <p class="community-subtitle fade-in">Connect, share experiences, and learn from fellow health enthusiasts</p>
+        </div>
+
+        <div class="community-layout">
+            <!-- Create Post Section -->
+            <div class="create-post-section glass fade-in">
+                <div class="create-post-header">
+                    <div class="user-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="user-info">
+                        <span class="username" id="current-username">Loading...</span>
+                        <span class="user-badge" id="current-user-badge"></span>
+                    </div>
+                </div>
+                <form id="create-post-form" class="create-post-form">
+                    <textarea 
+                        id="post-content" 
+                        placeholder="Share your thoughts, ask questions, or start a discussion..."
+                        class="post-textarea"
+                        rows="4"
+                        required
+                    ></textarea>
+                    <div class="post-actions">
+                        <div class="post-options">
+                            <select id="post-category" class="post-category">
+                                <option value="general">General Discussion</option>
+                                <option value="medication">Medication Questions</option>
+                                <option value="lifestyle">Lifestyle & Wellness</option>
+                                <option value="support">Support & Encouragement</option>
+                                <option value="tips">Health Tips</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary post-submit-btn">
+                            <i class="fas fa-paper-plane"></i>
+                            Share Post
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Posts Feed -->
+            <div class="posts-container">
+                <div class="posts-header">
+                    <h2 class="posts-title">Community Discussions</h2>
+                    <div class="posts-filters">
+                        <button class="filter-btn active" data-filter="all">All Posts</button>
+                        <button class="filter-btn" data-filter="general">General</button>
+                        <button class="filter-btn" data-filter="medication">Medication</button>
+                        <button class="filter-btn" data-filter="lifestyle">Lifestyle</button>
+                        <button class="filter-btn" data-filter="support">Support</button>
+                        <button class="filter-btn" data-filter="tips">Tips</button>
+                    </div>
+                </div>
+
+                <div id="posts-feed" class="posts-feed">
+                    <div class="loading-posts">
+                        <div class="skeleton post-skeleton">
+                            <div class="skeleton-avatar"></div>
+                            <div class="skeleton-content">
+                                <div class="skeleton-title"></div>
+                                <div class="skeleton-text"></div>
+                                <div class="skeleton-text"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Post Modal for Expanded View -->
+    <div id="post-modal" class="post-modal">
+        <div class="post-modal-content glass">
+            <div class="post-modal-header">
+                <h3>Discussion</h3>
+                <button class="post-modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="post-modal-body" class="post-modal-body">
+                <!-- Post content will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <footer class="main-footer">
+        <div class="container">
+            <p>© 2024 HealthBell. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="assets/main.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js" type="module"></script>
+    <script src="firebase-config.js" type="module"></script>
+    <script src="assets/community.js" type="module"></script>
+</body>
+</html>
