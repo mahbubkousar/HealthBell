@@ -36,23 +36,10 @@ let currentUserData = null;
 let conversationId = null;
 let isProcessing = false;
 
-// Gemini API Configuration
-const GEMINI_API_KEY = "AIzaSyAWb08i-s9reNQ6_WxJSSDTOIC69YAEFwQ"; // Updated API key from .env
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+// Netlify Function Configuration
+const GEMINI_FUNCTION_URL = "/.netlify/functions/gemini-api";
 
-// System prompt for medical symptom analysis
-const SYSTEM_PROMPT = `You are HealthBell AI, a medical symptom analyzer assistant. You provide helpful, accurate, and empathetic responses about health symptoms while following these guidelines:
-
-1. ALWAYS remind users that you are not a replacement for professional medical advice
-2. For serious symptoms, ALWAYS recommend seeking immediate medical attention
-3. Ask clarifying questions to better understand symptoms
-4. Provide general information about possible causes and when to see a doctor
-5. Be empathetic and reassuring while being medically responsible
-6. Do not provide specific diagnoses or prescribe treatments
-7. Focus on symptom assessment, general health information, and when to seek medical care
-8. If symptoms sound emergency-related, emphasize seeking immediate medical attention
-
-Keep responses concise but informative, and always maintain a caring, professional tone.`;
+// Note: System prompt is now handled by the Netlify function
 
 // Initialize the application
 onAuthStateChanged(auth, async (user) => {
@@ -209,78 +196,43 @@ async function processSymptomAnalysis(symptomText) {
   }
 }
 
-// Call Gemini API
+// Call Gemini API through Netlify Function
 async function callGeminiAPI(userMessage) {
   try {
-    const requestBody = {
-      contents: [
-        {
-          parts: [
-            {
-              text: `${SYSTEM_PROMPT}\n\nUser Query: ${userMessage}`
-            }
-          ]
-        }
-      ],
-      generationConfig: {
-        temperature: 0.7,
-        topK: 40,
-        topP: 0.95,
-        maxOutputTokens: 1024
-      },
-      safetySettings: [
-        {
-          category: "HARM_CATEGORY_HARASSMENT",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE"
-        },
-        {
-          category: "HARM_CATEGORY_HATE_SPEECH",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE"
-        },
-        {
-          category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE"
-        },
-        {
-          category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE"
-        }
-      ]
-    };
-
-    console.log("Making API request to:", GEMINI_API_URL);
-    console.log("Request body:", JSON.stringify(requestBody, null, 2));
-
-    const response = await fetch(GEMINI_API_URL, {
+    console.log("Making request to Netlify function:", GEMINI_FUNCTION_URL);
+    
+    const response = await fetch(GEMINI_FUNCTION_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify({
+        message: userMessage
+      })
     });
 
     console.log("Response status:", response.status);
     
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("API error response:", errorText);
-      throw new Error(`API request failed: ${response.status} - ${errorText}`);
+      const errorData = await response.json();
+      console.error("Function error response:", errorData);
+      throw new Error(`Function request failed: ${response.status} - ${errorData.error}`);
     }
 
     const data = await response.json();
-    console.log("API response data:", data);
+    console.log("Function response data:", data);
     
-    if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
+    if (data.text) {
       return {
-        text: data.candidates[0].content.parts[0].text
+        text: data.text
       };
     } else {
-      console.error("Unexpected API response structure:", data);
-      throw new Error("No response from AI model");
+      console.error("Unexpected function response structure:", data);
+      throw new Error("No response from AI service");
     }
     
   } catch (error) {
-    console.error("Gemini API Error:", error);
+    console.error("Gemini Function Error:", error);
     throw error;
   }
 }

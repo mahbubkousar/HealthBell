@@ -34,9 +34,8 @@ let currentFilter = "all";
 let currentPage = 1;
 const articlesPerPage = 12;
 
-// NewsAPI Configuration
-const NEWS_API_KEY = "8a7e86793d054c198f6919d7ff21bafe";
-const NEWS_API_URL = "https://newsapi.org/v2/top-headlines";
+// Netlify Function Configuration
+const NEWS_FUNCTION_URL = "/.netlify/functions/news-api";
 
 // Initialize the application
 onAuthStateChanged(auth, async (user) => {
@@ -144,37 +143,32 @@ function setupEventListeners() {
   }
 }
 
-// Load health news from NewsAPI
+// Load health news from Netlify Function
 async function loadHealthNews() {
   try {
     showLoadingSkeletons();
     
-    const apiUrl = `${NEWS_API_URL}?country=us&category=health&pageSize=50&apiKey=${NEWS_API_KEY}`;
-    console.log("Fetching news from:", apiUrl);
+    const functionUrl = `${NEWS_FUNCTION_URL}?country=us&category=health&pageSize=50`;
+    console.log("Fetching news from Netlify function:", functionUrl);
     
-    // Fetch health news from NewsAPI
-    const response = await fetch(apiUrl);
+    // Fetch health news from Netlify function
+    const response = await fetch(functionUrl);
     
     console.log("Response status:", response.status);
     
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("API error response:", errorText);
-      throw new Error(`NewsAPI request failed: ${response.status} - ${errorText}`);
+      const errorData = await response.json();
+      console.error("Function error response:", errorData);
+      throw new Error(`News function request failed: ${response.status} - ${errorData.error}`);
     }
     
     const data = await response.json();
-    console.log("API response:", data);
+    console.log("Function response:", data);
     
     if (data.status === "ok" && data.articles) {
-      allArticles = data.articles.filter(article => 
-        article.title && 
-        article.title !== "[Removed]" &&
-        article.description && 
-        article.description !== "[Removed]"
-      );
+      allArticles = data.articles; // Articles are already filtered in the function
       
-      console.log("Filtered articles count:", allArticles.length);
+      console.log("Articles count:", allArticles.length);
       
       filteredArticles = [...allArticles];
       renderNews();
@@ -184,7 +178,7 @@ async function loadHealthNews() {
       
     } else {
       console.error("Invalid response structure:", data);
-      throw new Error("Invalid response from NewsAPI");
+      throw new Error("Invalid response from News service");
     }
     
   } catch (error) {
