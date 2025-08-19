@@ -157,9 +157,14 @@ async function loadHealthNews() {
     console.log("Response status:", response.status);
     
     if (!response.ok) {
-      const errorData = await response.json();
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch (e) {
+        errorData = { error: 'Failed to parse error response', details: await response.text() };
+      }
       console.error("Function error response:", errorData);
-      throw new Error(`News function request failed: ${response.status} - ${errorData.error}`);
+      throw new Error(`News function request failed: ${response.status} - ${errorData.error || 'Unknown error'}`);
     }
     
     const data = await response.json();
