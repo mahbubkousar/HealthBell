@@ -1,4 +1,4 @@
-// netlify/functions/news-api.js - Serverless function for News API
+// netlify/functions/news-api.js - Serverless function for GNews API
 exports.handler = async (event, context) => {
   // Set CORS headers
   const headers = {
@@ -28,20 +28,20 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    // Get API key from environment variables
-    const NEWS_API_KEY = process.env.NEWS_API_KEY;
+    // Get API key from environment variables (now using GNews API key)
+    const GNEWS_API_KEY = process.env.GNEWS_API_KEY;
     
     console.log('Environment check:', {
-      hasNewsApiKey: !!NEWS_API_KEY,
-      keyLength: NEWS_API_KEY ? NEWS_API_KEY.length : 0
+      hasGNewsApiKey: !!GNEWS_API_KEY,
+      keyLength: GNEWS_API_KEY ? GNEWS_API_KEY.length : 0
     });
     
-    if (!NEWS_API_KEY) {
-      console.error('News API key not found in environment variables');
+    if (!GNEWS_API_KEY) {
+      console.error('GNews API key not found in environment variables');
       return {
         statusCode: 500,
         headers,
-        body: JSON.stringify({ error: 'News API key not configured' })
+        body: JSON.stringify({ error: 'GNews API key not configured' })
       };
     }
 
@@ -52,34 +52,36 @@ exports.handler = async (event, context) => {
     const { 
       country = 'us', 
       category = 'health', 
-      pageSize = '50',
+      max = '50',
       q: searchQuery,
       page = '1'
     } = queryParams;
 
-    // Build News API URL
-    let newsApiUrl = `https://newsapi.org/v2/top-headlines`;
+    // Build GNews API URL
+    let gnewsApiUrl = `https://gnews.io/api/v4/top-headlines`;
     
     // Add parameters
     const params = new URLSearchParams();
-    params.append('apiKey', NEWS_API_KEY);
+    params.append('apikey', GNEWS_API_KEY);
+    params.append('lang', 'en');
     
     if (searchQuery) {
-      params.append('q', searchQuery);
+      // Use search endpoint for queries
+      gnewsApiUrl = `https://gnews.io/api/v4/search`;
+      params.append('q', `${searchQuery} health`);
     } else {
       params.append('country', country);
       params.append('category', category);
     }
     
-    params.append('pageSize', Math.min(parseInt(pageSize), 100).toString()); // NewsAPI max is 100
-    params.append('page', page);
+    params.append('max', Math.min(parseInt(max), 100).toString()); // GNews max is 100
     
-    newsApiUrl += '?' + params.toString();
+    gnewsApiUrl += '?' + params.toString();
 
-    console.log('Fetching news from:', newsApiUrl.replace(NEWS_API_KEY, '[API_KEY_HIDDEN]'));
+    console.log('Fetching news from GNews:', gnewsApiUrl.replace(GNEWS_API_KEY, '[API_KEY_HIDDEN]'));
 
-    // Make request to News API with proper headers
-    const response = await fetch(newsApiUrl, {
+    // Make request to GNews API with proper headers
+    const response = await fetch(gnewsApiUrl, {
       method: 'GET',
       headers: {
         'User-Agent': 'HealthBell-App/1.0',
@@ -87,18 +89,18 @@ exports.handler = async (event, context) => {
       }
     });
 
-    console.log('News API response status:', response.status);
-    console.log('News API response headers:', Object.fromEntries(response.headers.entries()));
+    console.log('GNews API response status:', response.status);
+    console.log('GNews API response headers:', Object.fromEntries(response.headers.entries()));
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('News API Error Response:', errorText);
+      console.error('GNews API Error Response:', errorText);
       
       // Try to parse error as JSON
       let errorDetails = errorText;
       try {
         const errorJson = JSON.parse(errorText);
-        errorDetails = errorJson.message || errorText;
+        errorDetails = errorJson.message || errorJson.error || errorText;
       } catch (e) {
         // Keep original error text if not JSON
       }
@@ -107,7 +109,7 @@ exports.handler = async (event, context) => {
         statusCode: response.status,
         headers,
         body: JSON.stringify({ 
-          error: 'Failed to fetch news from NewsAPI',
+          error: 'Failed to fetch news from GNews API',
           details: errorDetails,
           status: response.status
         })
@@ -115,46 +117,47 @@ exports.handler = async (event, context) => {
     }
 
     const data = await response.json();
-    console.log('News API response data structure:', {
-      status: data.status,
-      totalResults: data.totalResults,
+    console.log('GNews API response data structure:', {
+      totalArticles: data.totalArticles,
       articlesCount: data.articles ? data.articles.length : 0
     });
 
-    // Validate response
-    if (data.status !== 'ok') {
-      console.error('News API returned non-ok status:', data);
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ 
-          error: 'News API returned error status',
-          details: data.message || data.code || 'Unknown error',
-          newsApiStatus: data.status
-        })
-      };
-    }
+    // Transform GNews response to match NewsAPI format for compatibility
+    const transformedData = {
+      status: 'ok',
+      totalResults: data.totalArticles || 0,
+      articles: data.articles || []
+    };
 
-    // Filter out articles with removed content
-    if (data.articles) {
-      const originalCount = data.articles.length;
-      data.articles = data.articles.filter(article => 
+    // Filter out articles with missing content
+    if (transformedData.articles) {
+      const originalCount = transformedData.articles.length;
+      transformedData.articles = transformedData.articles.filter(article => 
         article.title && 
-        article.title !== "[Removed]" &&
         article.description && 
-        article.description !== "[Removed]" &&
         article.url &&
         article.source
-      );
-      console.log(`Filtered articles: ${originalCount} -> ${data.articles.length}`);
+      ).map(article => ({
+        // Transform GNews format to NewsAPI-like format
+        title: article.title,
+        description: article.description,
+        url: article.url,
+        urlToImage: article.image,
+        publishedAt: article.publishedAt,
+        source: {
+          name: article.source.name
+        },
+        content: article.content
+      }));
+      console.log(`Filtered articles: ${originalCount} -> ${transformedData.articles.length}`);
     }
 
-    console.log('Successfully processed news data');
+    console.log('Successfully processed GNews data');
     
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify(data)
+      body: JSON.stringify(transformedData)
     };
 
   } catch (error) {

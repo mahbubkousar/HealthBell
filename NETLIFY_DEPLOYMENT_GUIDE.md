@@ -51,7 +51,7 @@ Click "Deploy site" to continue.
 | Variable Name | Value |
 |---------------|-------|
 | `GEMINI_API_KEY` | `AIzaSyAWb08i-s9reNQ6_WxJSSDTOIC69YAEFwQ` |
-| `NEWS_API_KEY` | `8a7e86793d054c198f6919d7ff21bafe` |
+| `GNEWS_API_KEY` | `your_gnews_api_key_from_gnews.io` |
 
 4. Click **Save** for each variable
 

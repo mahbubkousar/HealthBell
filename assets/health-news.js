@@ -148,7 +148,7 @@ async function loadHealthNews() {
   try {
     showLoadingSkeletons();
     
-    const functionUrl = `${NEWS_FUNCTION_URL}?country=us&category=health&pageSize=50`;
+    const functionUrl = `${NEWS_FUNCTION_URL}?country=us&category=health&max=50`;
     console.log("Fetching news from Netlify function:", functionUrl);
     
     // Fetch health news from Netlify function
